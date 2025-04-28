@@ -12,6 +12,8 @@ source = "vcs"
 [tool.hatch.build.targets.wheel]
 packages = ["src/abbott_features"]
 
+[tool.hatch.metadata]
+allow-direct-references = true # remove once ngio-dev is integrated in ngio
 
 # Project metadata (see https://peps.python.org/pep-0621)
 [project]
@@ -26,7 +28,13 @@ authors = [
 
 # Required Python version and dependencies
 requires-python = ">=3.11"
-dependencies = ["ngio>=0.2.1", "scikit-image", "fractal-task-tools"]
+dependencies = ["ngio @ git+https://github.com/rhornb/ngio.git@dev", 
+                "polars; platform_system != 'Darwin'",
+                "polars-lts-cpu; platform_system == 'Darwin'",
+                "spatial-image", 
+                "itk", 
+                "strenum",
+                "fractal-task-tools"]
 
 # Optional dependencies (e.g. for `pip install -e ".[dev]"`, see
 # https://peps.python.org/pep-0621/#dependencies-optional-dependencies)
