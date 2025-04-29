@@ -18,7 +18,7 @@ import polars as pl
 import spatial_image as si
 from ngio import open_ome_zarr_container
 from ngio.tables.tables_container import write_table
-from ngio.tables.v1 import GenericTable
+from ngio.tables.v1 import FeatureTableV1
 from pydantic import validate_call
 
 from abbott_features.features.constants import (
@@ -116,10 +116,8 @@ def measure_label_features(
     # Save the output table
     store = Path(f"{zarr_url}/tables/features/{output_table_name}")
 
-    generic_table = GenericTable(
-        table_data=table_out, index_key="label", index_type="int"
-    )
-    write_table(store=store, table=generic_table, backend="experimental_parquet_v1")
+    feature_table = FeatureTableV1(table_out, reference_label="label")
+    write_table(store=store, table=feature_table, backend="experimental_parquet_v1")
 
 
 if __name__ == "__main__":
