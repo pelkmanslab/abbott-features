@@ -4,17 +4,16 @@ from fractal_task_tools.task_models import (
     ParallelTask,
 )
 
-AUTHORS = "Fractal Core Team"
-DOCS_LINK = None
-INPUT_MODELS = []
+AUTHORS = "Ruth Hornbachner, Maks Hess"
+DOCS_LINK = "https://github.com/pelkmanslab/abbott-features"
 
 TASK_LIST = [
     ParallelTask(
-        name="Thresholding Label Task",
-        executable="thresholding_label_task.py",
+        name="Measure Label Features",
+        executable="fractal_tasks/measure_label_features.py",
         meta={"cpus_per_task": 1, "mem": 4000},
-        category="Segmentation",
-        tags=["Instance Segmentation", "Classical segmentation"],
-        docs_info="file:docs_info/thresholding_task.md",
+        category="Measurement",
+        tags=["3D", "Morphology", "Feature Table"],
+        docs_info="file:docs_info/measure_label_features.md",
     ),
 ]

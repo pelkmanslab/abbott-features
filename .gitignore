@@ -110,3 +110,7 @@ ENV/
 # IDE settings
 .vscode/
 .idea/
+
+*.zarr
+# Test data loaded via pooch
+tests/data/

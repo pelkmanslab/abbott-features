@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04, macos-latest]
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.11", "3.12"]
         exclude:
           - os: macos-latest
             python-version: '3.9'
@@ -42,17 +42,8 @@ jobs:
       - name: Install package
         run: python -m pip install -e .[dev]
 
-      - name: Regenerate the manifest
-        run: python src/abbott_features/dev/create_manifest.py
-
       - name: Check if manifest has changed
-        run: |
-          if [ -n "$(git diff --exit-code ./src/abbott_features/__FRACTAL_MANIFEST__.json)" ]; then
-          echo "__FRACTAL_MANIFEST__.json has changed. Please run 'python src/abbott_features/dev/create_manifest.py' and commit the changes."
-            exit 1
-          else
-            echo "__FRACTAL_MANIFEST__.json has not changed."
-          fi
+        run: fractal-manifest check --package abbott_features --fractal-server-2-13
 
       - name: Test core library with pytest
         run: python -m pytest tests
