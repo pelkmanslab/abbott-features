@@ -12,7 +12,6 @@ def get_si_features_df(
     lbl_img: LabelImage,
     int_img: SpatialImage | None = None,
     *,
-    lbl_dim: str = "l",
     props: set[str] | None = None,
     named_features: bool = True,
     object_column: bool = False,
@@ -30,13 +29,13 @@ def get_si_features_df(
             df = df.select(
                 [
                     pl.col("label"),
-                    pl.exclude("label").prefix(f"{int_img.c.item()}_"),
+                    pl.exclude("label").name.prefix(f"{int_img.name}_"),
                 ]
             )
     if object_column:
         df = df.with_columns(
             [
-                pl.lit(lbl_img[lbl_dim].item()).alias("object"),
+                pl.lit(lbl_img.name).alias("object"),
             ]
         ).select(
             [

@@ -4,4 +4,4 @@
 
 ### Outputs
 - A **label feature table** saved in the OME-Zarr structure, containing:
-  - Morphology features (e.g., size, shape, bounding box coordinates).
+- Morphology features (e.g., size, shape, bounding box coordinates).

@@ -1,4 +1,4 @@
-"""Feature queries for label images."""
+"""Function to extract features from label image."""
 
 from typing import TypeAlias
 
@@ -17,17 +17,16 @@ LabelFeatureLike: TypeAlias = tuple[LabelFeature, ...] | tuple[str, ...]
 
 def get_label_features(
     label_image: LabelImage,
-    ROI_id: int | None = None,
+    ROI_id: str,
     features: LabelFeatureLike = tuple(DefaultLabelFeature),
-) -> "pl.DataFrame":
+) -> pl.DataFrame:
     """Get label features from a label image."""
     valid_label_features = tuple(str(LabelFeature(e)) for e in features)
     feature_table = get_si_features_df(
         label_image, props=valid_label_features, named_features=True
     )
     # add ROI column
-    if ROI_id is not None:
-        feature_table = feature_table.with_columns(pl.lit(ROI_id).alias("ROI"))
+    feature_table = feature_table.with_columns(pl.lit(ROI_id).alias("ROI"))
     return feature_table
 
 

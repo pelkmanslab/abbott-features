@@ -103,7 +103,7 @@ def measure_label_features(
         )
 
         table_roi = get_label_features(
-            label_image=label_spatial_image, ROI_id=roi.name, features=features
+            label_image=label_spatial_image, ROI_id=str(roi.name), features=features
         )
 
         tables.append(table_roi)

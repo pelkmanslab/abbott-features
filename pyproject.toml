@@ -31,6 +31,9 @@ requires-python = ">=3.11"
 dependencies = ["ngio @ git+https://github.com/rhornb/ngio.git@dev", 
                 "polars; platform_system != 'Darwin'",
                 "polars-lts-cpu; platform_system == 'Darwin'",
+                "scipy",
+                "scikit-learn",
+                "scikit-image",
                 "spatial-image", 
                 "itk", 
                 "strenum",
@@ -44,7 +47,7 @@ dev = ["devtools", "hatch", "pytest", "requests", "jsonschema", "ruff", "pre-com
 # https://docs.astral.sh/ruff
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py39"
 src = ["src"]
 
 # https://docs.astral.sh/ruff/rules
@@ -64,6 +67,9 @@ select = [
     "RUF",  # ruff-specific rules
     "TCH",  # flake8-type-checking
     "TID",  # flake8-tidy-imports
+]
+extend-select = [
+    "D417", # Missing argument descriptions in Docstrings
 ]
 ignore = [
     "D401", # First line should be in imperative mood (remove to opt in)
