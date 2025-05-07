@@ -15,6 +15,7 @@ associated label image.
 
 import logging
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import polars as pl
@@ -40,8 +41,8 @@ def measure_intensity_features(
     zarr_url: str,
     # Task-specific arguments:
     label_name: str,
-    channels_to_include: list[ChannelInputModel] | None = None,
-    channels_to_exclude: list[ChannelInputModel] | None = None,
+    channels_to_include: Optional[list[ChannelInputModel]] = None,
+    channels_to_exclude: Optional[list[ChannelInputModel]] = None,
     z_decay_correction: bool = False,  # TODO: implement
     t_decay_correction: bool = False,  # TODO: implement
     level: str = "0",
