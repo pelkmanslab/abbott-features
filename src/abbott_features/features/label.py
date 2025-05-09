@@ -2,7 +2,9 @@
 
 from typing import TypeAlias
 
+import ngio
 import polars as pl
+import spatial_image as si
 
 from abbott_features.features._base import get_si_features_df
 from abbott_features.features.constants import (
@@ -16,17 +18,27 @@ LabelFeatureLike: TypeAlias = tuple[LabelFeature, ...] | tuple[str, ...]
 
 
 def get_label_features(
-    label_image: LabelImage,
-    ROI_id: str,
+    label_image: ngio.images.label.Label,
+    roi: ngio.common._roi.Roi,
     features: LabelFeatureLike = tuple(DefaultLabelFeature),
 ) -> pl.DataFrame:
     """Get label features from a label image."""
+    axes_names = label_image.axes_mapper.on_disk_axes_names
+    pixel_sizes = label_image.pixel_size.as_dict()
+
+    label_numpy = label_image.get_roi(roi).astype("uint16")
+    label_spatial_image = si.to_spatial_image(
+        label_numpy,
+        dims=axes_names,
+        scale=pixel_sizes,
+    )
+
     valid_label_features = tuple(str(LabelFeature(e)) for e in features)
     feature_table = get_si_features_df(
-        label_image, props=valid_label_features, named_features=True
+        label_spatial_image, props=valid_label_features, named_features=True
     )
     # add ROI column
-    feature_table = feature_table.with_columns(pl.lit(ROI_id).alias("ROI"))
+    feature_table = feature_table.with_columns(pl.lit(roi.name).alias("ROI"))
     return feature_table
 
 

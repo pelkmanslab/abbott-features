@@ -6,6 +6,7 @@ __pycache__/
 
 # C extensions
 *.so
+*.c
 
 # Distribution / packaging
 .Python
@@ -112,5 +113,6 @@ ENV/
 .idea/
 
 *.zarr
+
 # Test data loaded via pooch
 tests/data/

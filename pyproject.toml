@@ -1,16 +1,10 @@
-# https://peps.python.org/pep-0517/
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0", "numpy>=1.17", "cython>=0.18"]
+build-backend = "setuptools.build_meta"
 
 # https://hatch.pypa.io/latest/config/metadata/
 [tool.hatch.version]
 source = "vcs"
-
-# read more about configuring hatch at:
-# https://hatch.pypa.io/latest/config/build/
-[tool.hatch.build.targets.wheel]
-packages = ["src/abbott_features"]
 
 [tool.hatch.metadata]
 allow-direct-references = true # remove once ngio-dev is integrated in ngio
@@ -37,6 +31,8 @@ dependencies = ["ngio @ git+https://github.com/rhornb/ngio.git@dev",
                 "spatial-image", 
                 "itk", 
                 "strenum",
+                "numba",
+                "networkx[default]",
                 "fractal-task-tools"]
 
 # Optional dependencies (e.g. for `pip install -e ".[dev]"`, see
@@ -74,6 +70,13 @@ extend-select = [
 ignore = [
     "D401", # First line should be in imperative mood (remove to opt in)
     "D415", # First line should end with a period (remove to opt in)
+    "D101", # Missing docstring in public class (remove to opt in)
+    "D102", # Missing docstring in public module (remove to opt in)
+    "D103", # Missing docstring in public module (remove to opt in)
+    "D105", # Missing docstring in magic method (remove to opt in)
+    "D107", # Missing docstring in `__init__` (remove to opt in)
+
+
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -83,4 +86,4 @@ ignore = [
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 89
-skip-magic-trailing-comma = false  # default is false
+skip-magic-trailing-comma = false  #// filepath: /Users/ruthh/Pelkmans/Fractal/abbott-features/pyproject.toml

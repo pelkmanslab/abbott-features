@@ -16,7 +16,7 @@ class DensityParams:
     knn_distance: tuple[int, ...] = (2, 5, 10, 20, 50, 100, 200)
     delaunay: tuple[int, ...] = (1,)
     touch: tuple[int, ...] = 1
-    adjacency_aggfuncs: tuple[str, ...] = "Count"
+    adjacency_aggfuncs: tuple[str, ...] = ("Count",)
     distance_aggfuncs: tuple[str, ...] = ("Mean", "Max")
 
 
