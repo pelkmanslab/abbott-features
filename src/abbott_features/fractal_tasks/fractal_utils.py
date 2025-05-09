@@ -57,3 +57,62 @@ class ChannelPairInputModel(BaseModel):
 
     channel0: ChannelInputModel
     channel1: ChannelInputModel
+
+
+class IntensityFeaturesInputModel(BaseModel):
+    """Get intensity features to measure.
+
+    Attributes:
+        channels_to_include: Channels to include in the measurement.
+        channels_to_exclude: Channels to exclude from the measurement.
+    """
+
+    channels_to_include: list[ChannelInputModel] = None
+    channels_to_exclude: list[ChannelInputModel] = None
+
+    @model_validator(mode="after")
+    def mutually_exclusive_channel_attributes(self: Self) -> Self:
+        """Check that either `channels_to_include` or `channels_to_exclude` is set."""
+        channels_to_include = self.channels_to_include
+        channels_to_exclude = self.channels_to_exclude
+
+        if channels_to_include and channels_to_exclude:
+            raise ValueError(
+                "`channels_to_include` and `channels_to_exclude` cannot be both set "
+                f"(given {channels_to_include=} and {channels_to_exclude=})."
+            )
+        return self
+
+
+class DistanceFeaturesInputModel(BaseModel):
+    """Get label_name of label image to measure distance to.
+
+    Attributes:
+        label_name_to: Name of the label image to measure distance
+            to e.g. "embryo" or "organoid".
+    """
+
+    label_name_to: str
+
+
+class ColocalizationFeaturesInputModel(BaseModel):
+    """Get channel pair(s) to measure colocalization features.
+
+    Attributes:
+        channel_pair: Name of the channel pair to measure colocalization features.
+    """
+
+    channel_pair: list[ChannelPairInputModel]
+
+
+class NeighborhoodFeaturesInputModel(BaseModel):
+    """Get label_name of label image to measure neighborhood in.
+
+    Attributes:
+        measure: Whether to measure neighborhood features or not.
+        label_img_mask: Name of the label image to measure neighborhood
+            in e.g. "embryo" or "organoid".
+    """
+
+    measure: bool = False
+    label_img_mask: str

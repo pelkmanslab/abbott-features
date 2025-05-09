@@ -7,8 +7,10 @@ from typing import (
     TypeAlias,
 )
 
+import ngio
 import numpy as np
 import polars as pl
+import spatial_image as si
 from scipy.stats import chi2_contingency, kendalltau, pearsonr, spearmanr
 from skimage.measure import regionprops_table
 from sklearn.metrics import mutual_info_score, normalized_mutual_info_score
@@ -17,7 +19,6 @@ from abbott_features.features.constants import (
     ColocalizationFeature,
     DefaultColocalizationFeature,
 )
-from abbott_features.features.types import LabelImage, SpatialImage
 
 
 # TODO: Consistency of error cases between statistics
@@ -83,11 +84,12 @@ RESOURCE_COLUMNS = ("channel0", "channel1")
 
 
 def get_colocalization_features(
-    label_image: LabelImage,
-    channel0: SpatialImage,
-    channel1: SpatialImage,
+    label_image: ngio.images.label.Label,
+    images: ngio.images.image.Image,
+    channel0: str,
+    channel1: str,
     *,
-    ROI_id: str,
+    roi: ngio.common._roi.Roi,
     features: tuple[ColocalizationFeature, ...] = tuple(DefaultColocalizationFeature),
     index_columns: tuple[Literal["label", "label_image"], ...] = ("label",),
     index_prefix: str | None = None,
@@ -97,12 +99,44 @@ def get_colocalization_features(
     return_metadata: bool = False,
 ) -> pl.DataFrame:
     """Get colocalization features from a label image and two channels."""
+    axes_names = label_image.axes_mapper.on_disk_axes_names
+    pixel_sizes = label_image.pixel_size.as_dict()
+
+    label_numpy = label_image.get_roi(roi).astype("uint16")
+    label_spatial_image = si.to_spatial_image(
+        label_numpy,
+        dims=axes_names,
+        scale=pixel_sizes,
+    )
+
+    channel_0_idx = images.meta.get_channel_idx(label=channel0)
+    channel_1_idx = images.meta.get_channel_idx(label=channel1)
+
+    image_0_numpy = (
+        images.get_roi(roi, c=channel_0_idx, mode="numpy").astype("uint16").squeeze()
+    )
+    channel_0_spatial_image = si.to_spatial_image(
+        image_0_numpy,
+        dims=axes_names,
+        scale=pixel_sizes,
+        name=channel0,
+    )
+    image_1_numpy = (
+        images.get_roi(roi, c=channel_1_idx, mode="numpy").astype("uint16").squeeze()
+    )
+    channel_1_spatial_image = si.to_spatial_image(
+        image_1_numpy,
+        dims=axes_names,
+        scale=pixel_sizes,
+        name=channel1,
+    )
+
     valid_features = tuple(ColocalizationFeature(e) for e in features)
 
     coloc_functions = {str(k): ALL_CORRELATION_FUNCTIONS[k] for k in valid_features}
-    lbls = label_image.to_numpy()
-    img1 = channel0.to_numpy()
-    img2 = channel1.to_numpy()
+    lbls = label_spatial_image.to_numpy()
+    img1 = channel_0_spatial_image.to_numpy()
+    img2 = channel_1_spatial_image.to_numpy()
 
     props = regionprops_table(lbls, properties=("label", "slice"))
     labels = props["label"]
@@ -129,9 +163,9 @@ def get_colocalization_features(
 
     meta = {
         "feature_type": "correlation",
-        "label_image": label_image.name,
-        "channel0": channel0.name,
-        "channel1": channel1.name,
+        "label_image": label_spatial_image.name,
+        "channel0": channel_0_spatial_image.name,
+        "channel1": channel_1_spatial_image.name,
     }
 
     if resource_in_name:
@@ -188,7 +222,7 @@ def get_colocalization_features(
     meta["resource_columns"] = resource_columns_out
 
     # add ROI column
-    df = df.with_columns(pl.lit(ROI_id).alias("ROI"))
+    df = df.with_columns(pl.lit(roi.name).alias("ROI"))
 
     if return_metadata:
         return df, meta

@@ -23,10 +23,13 @@ from abbott_features.features.types import (
 )
 
 
-def _distance_to_border(mask: BinaryImage) -> DistanceTransform:
+def _distance_to_border(
+    mask: BinaryImage, label_image_to: ngio.images.label.Label
+) -> DistanceTransform:
     lbl_dim = "l"
     dt = itk.signed_maurer_distance_map_image_filter(mask, inside_is_positive=True)
     dt.coords["c"] = mask[lbl_dim].item()
+    dt.name = label_image_to.meta.name
     return dt
 
 
@@ -49,7 +52,7 @@ DISTANCE_FUNCTIONS = {
 def _get_mask(lbl_img: LabelImage, lbl: int, lbl_dim: str = "l") -> BinaryImage:
     mask = (lbl_img == lbl).astype(lbl_img.dtype)
     label_name = lbl_img.name
-    mask.coords[lbl_dim] = f"{label_name}-{lbl}"
+    mask.coords[lbl_dim] = label_name
     return mask
 
 
@@ -107,10 +110,7 @@ def get_distance_features(
     dfs = []
     for name, distance_function in distance_transforms.items():
         try:
-            if name == "DistanceToBorder":
-                dt = distance_function(mask)
-            else:
-                dt = distance_function(mask, label_image_to)
+            dt = distance_function(mask, label_image_to)
         except ValueError as e:
             print(f"Can't compute {name}")
             print(f"{e}")
@@ -130,7 +130,7 @@ def get_distance_features(
         [dfs[0].select(index), *[df.drop(index) for df in dfs]], how="horizontal"
     )
 
-    df_out = df_out.with_columns(pl.lit(str(roi.name)).alias("ROI"))
+    df_out = df_out.with_columns(pl.lit(roi.name).alias("ROI"))
     return df_out
 
 
