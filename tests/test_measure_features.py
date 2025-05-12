@@ -46,7 +46,7 @@ def test_measure_features(test_data_dir):
         ]
     )
     measure_neighborhood_features = NeighborhoodFeaturesInputModel(
-        measure=False, label_img_mask="emb_linked"
+        measure=True, label_img_mask="emb_linked"
     )
 
     measure_features(

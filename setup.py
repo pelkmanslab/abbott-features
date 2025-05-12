@@ -1,13 +1,8 @@
 """Setup script to cythonize .pyx file."""
 
-import os
-
 import numpy
 from Cython.Build import cythonize
 from setuptools import Extension, find_packages, setup
-
-# Set environment variable to use a different compiler (e.g., clang on macOS)
-os.environ["CC"] = "clang"  # Use the default macOS compiler
 
 # Use the correct relative path to the Cython file
 cython_file = (
