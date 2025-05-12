@@ -1,6 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0", "numpy>=1.17", "cython>=0.18"]
+requires = ["setuptools>=61", "numpy>=1.17", "cython>=0.18", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["abbott_features"]
 
 # https://hatch.pypa.io/latest/config/metadata/
 [tool.hatch.version]
@@ -23,8 +27,7 @@ authors = [
 # Required Python version and dependencies
 requires-python = ">=3.11"
 dependencies = ["ngio @ git+https://github.com/rhornb/ngio.git@dev", 
-                "polars; platform_system != 'Darwin'",
-                "polars-lts-cpu; platform_system == 'Darwin'",
+                "polars",
                 "scipy",
                 "scikit-learn",
                 "scikit-image",
@@ -33,7 +36,7 @@ dependencies = ["ngio @ git+https://github.com/rhornb/ngio.git@dev",
                 "strenum",
                 "numba",
                 "networkx[default]",
-                "fractal-task-tools"]
+                "fractal-task-tools",]
 
 # Optional dependencies (e.g. for `pip install -e ".[dev]"`, see
 # https://peps.python.org/pep-0621/#dependencies-optional-dependencies)

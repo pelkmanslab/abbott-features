@@ -1,26 +1,17 @@
-"""Setup script to cythonize .pyx file."""
+"""Build script for Cython files"""
 
-import numpy
+import numpy as np
 from Cython.Build import cythonize
-from setuptools import Extension, find_packages, setup
+from setuptools import Extension, setup
 
-# Use the correct relative path to the Cython file
-cython_file = (
-    "src/abbott_features/features/neighborhood/neighborhood_matrix_parallel.pyx"
-)
-
-# Define extension
 extensions = [
     Extension(
         "abbott_features.features.neighborhood.neighborhood_matrix_parallel",
-        [cython_file],
-        include_dirs=[numpy.get_include()],
+        ["src/abbott_features/features/neighborhood/neighborhood_matrix_parallel.pyx"],
+        include_dirs=[np.get_include()],
     )
 ]
 
-# Setup configuration that works with build_meta backend
 setup(
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
     ext_modules=cythonize(extensions),
 )
