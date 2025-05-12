@@ -621,7 +621,7 @@ class NeighborhoodQueryObject:
         touch_adjacency: TouchAdjacency | None = None,
         delaunay_adjacency: DelaunayAdjacency | None = None,
         label: pl.DataFrame | None = None,
-        queries: "tuple[NeighborhoodQuery, ...]" = tuple,
+        queries: "tuple[NeighborhoodQuery, ...]" = (),
     ):
         self.neighbors = neighbors
         self.touch_adjacency = touch_adjacency

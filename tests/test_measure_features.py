@@ -20,7 +20,8 @@ def test_data_dir(tmp_path: Path, zenodo_zarr: Path) -> str:
     """
     Copy a test-data folder into a temporary folder.
     """
-    dest_dir = (tmp_path / "data").as_posix()
+    dest_dir = "/data/active/rhornb/fractal/pytest/data"
+    # dest_dir = (tmp_path / "data").as_posix()
     debug(zenodo_zarr, dest_dir)
     shutil.copytree(zenodo_zarr, dest_dir)
     return dest_dir
@@ -46,7 +47,7 @@ def test_measure_features(test_data_dir):
         ]
     )
     measure_neighborhood_features = NeighborhoodFeaturesInputModel(
-        measure=False, label_img_mask="emb_linked"
+        measure=True, label_img_mask="emb_linked"
     )
 
     measure_features(
