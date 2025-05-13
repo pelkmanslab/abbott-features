@@ -1,14 +1,14 @@
 [build-system]
-requires = ["setuptools>=61", "numpy>=1.17", "cython>=0.18", "wheel"]
+requires = ["setuptools>=61", "setuptools-scm", "numpy>=1.17", "cython>=0.18", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 packages = ["abbott_features"]
 
-# https://hatch.pypa.io/latest/config/metadata/
-[tool.hatch.version]
-source = "vcs"
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "no-local-version"
 
 [tool.hatch.metadata]
 allow-direct-references = true # remove once ngio-dev is integrated in ngio
