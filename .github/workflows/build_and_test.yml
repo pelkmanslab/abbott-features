@@ -18,11 +18,6 @@ jobs:
       matrix:
         os: [ubuntu-22.04]
         python-version: ["3.11", "3.12"]
-        exclude:
-          - os: macos-latest
-            python-version: '3.9'
-          - os: macos-latest
-            python-version: '3.10'
     name: "Core, Python ${{ matrix.python-version }}, ${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
