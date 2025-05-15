@@ -10,8 +10,11 @@
 # Zurich.
 """Helper functions to address channels via OME-NGFF/OMERO metadata."""
 
-from typing import Self
+from pathlib import Path
+from typing import Optional, Self
 
+import zarr
+from ngio import open_ome_zarr_container
 from pydantic import BaseModel, model_validator
 
 
@@ -92,7 +95,7 @@ class DistanceFeaturesInputModel(BaseModel):
             to e.g. "embryo" or "organoid".
     """
 
-    label_name_to: str
+    label_name_to: str | None = None
 
 
 class ColocalizationFeaturesInputModel(BaseModel):
@@ -115,4 +118,35 @@ class NeighborhoodFeaturesInputModel(BaseModel):
     """
 
     measure: bool = False
-    label_img_mask: str
+    label_img_mask: Optional[str] = None
+
+    @model_validator(mode="after")
+    def mutually_exclusive_channel_attributes(self: Self) -> Self:
+        """Check that if `measure` is set to False, `label_img_mask` is None."""
+        measure = self.measure
+        label_img_mask = self.label_img_mask
+
+        if not measure and label_img_mask is not None:
+            raise ValueError(f"`measure` can not be set to False if {label_img_mask=}.")
+        return self
+
+
+def get_zarrurl_from_image_label(well_url: Path, channel_label: str, level: str = "0"):
+    """Get the zarr_url for a specific iamge channel from an OME-Zarr file.
+
+    Args:
+        well_url: Path to well of OME-Zarr file e.g. /path_to_zarr/B/03.
+        channel_label: Label of the channel to get zarr_url for.
+        level: Pyramid level of the OME_Zarr image. Default is "0".
+
+    Returns:
+        zarr_url for the specified channel_label.
+    """
+    well_group = zarr.open(well_url, mode="r")
+    for image in well_group.attrs["well"]["images"]:
+        zarr_url = well_url.joinpath(well_url, image["path"])
+        ome_zarr_container = open_ome_zarr_container(zarr_url)
+        channel_labels = ome_zarr_container.get_image(path=level).channel_labels
+
+        if channel_label in channel_labels:
+            return zarr_url

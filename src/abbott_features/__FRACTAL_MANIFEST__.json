@@ -81,9 +81,6 @@
                 "type": "string"
               }
             },
-            "required": [
-              "label_name_to"
-            ],
             "title": "DistanceFeaturesInputModel",
             "type": "object"
           },
@@ -121,9 +118,6 @@
                 "type": "string"
               }
             },
-            "required": [
-              "label_img_mask"
-            ],
             "title": "NeighborhoodFeaturesInputModel",
             "type": "object"
           }
@@ -179,6 +173,10 @@
           },
           "measure_neighborhood_features": {
             "$ref": "#/$defs/NeighborhoodFeaturesInputModel",
+            "default": {
+              "measure": false,
+              "label_img_mask": null
+            },
             "title": "Measure Neighborhood Features",
             "description": "If `measure` is set to True, neighborhood features will be measured. If neighborhood is measured in e.g. `embryo` or `organoid` segmentation provide the `label_img_mask`."
           },
@@ -195,13 +193,13 @@
           "output_table_name": {
             "title": "Output Table Name",
             "type": "string",
-            "description": "Name of output feature table."
+            "description": "Name of the output feature table."
           },
           "overwrite": {
-            "default": false,
+            "default": true,
             "title": "Overwrite",
             "type": "boolean",
-            "description": "Whether to overwrite an existing output table."
+            "description": "Whether to overwrite an existing output feature table."
           }
         },
         "required": [
