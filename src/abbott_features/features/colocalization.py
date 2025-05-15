@@ -1,6 +1,7 @@
 """Functions to extract colocalization features."""
 
 from collections.abc import Callable, Sequence
+from pathlib import Path
 from typing import (
     Literal,
     NamedTuple,
@@ -85,10 +86,10 @@ RESOURCE_COLUMNS = ("channel0", "channel1")
 
 def get_colocalization_features(
     label_image: ngio.images.label.Label,
-    images: ngio.images.image.Image,
-    channel0: str,
-    channel1: str,
+    channel0: dict[str, Path],
+    channel1: dict[str, Path],
     *,
+    level: str,
     roi: ngio.common._roi.Roi,
     features: tuple[ColocalizationFeature, ...] = tuple(DefaultColocalizationFeature),
     index_columns: tuple[Literal["label", "label_image"], ...] = ("label",),
@@ -102,6 +103,7 @@ def get_colocalization_features(
     axes_names = label_image.axes_mapper.on_disk_axes_names
     pixel_sizes = label_image.pixel_size.as_dict()
 
+    # Get the label image
     label_numpy = label_image.get_roi(roi).astype("uint16")
     label_spatial_image = si.to_spatial_image(
         label_numpy,
@@ -109,26 +111,44 @@ def get_colocalization_features(
         scale=pixel_sizes,
     )
 
-    channel_0_idx = images.meta.get_channel_idx(label=channel0)
-    channel_1_idx = images.meta.get_channel_idx(label=channel1)
+    # Get the channel images
+    channel_0_images = ngio.open_ome_zarr_container(
+        channel0["channel_zarr_url"]
+    ).get_image(path=level)
+    channel_0_idx = channel_0_images.meta.get_channel_idx(
+        label=channel0["channel_label"]
+    )
+    channel_0_numpy = (
+        channel_0_images.get_roi(roi, c=channel_0_idx, mode="numpy")
+        .astype("uint16")
+        .squeeze()
+    )
 
-    image_0_numpy = (
-        images.get_roi(roi, c=channel_0_idx, mode="numpy").astype("uint16").squeeze()
+    channel_1_images = ngio.open_ome_zarr_container(
+        channel1["channel_zarr_url"]
+    ).get_image(path=level)
+    channel_1_idx = channel_1_images.meta.get_channel_idx(
+        label=channel1["channel_label"]
     )
+    channel_1_numpy = (
+        channel_1_images.get_roi(roi, c=channel_1_idx, mode="numpy")
+        .astype("uint16")
+        .squeeze()
+    )
+
+    # Convert the channel images to spatial images
     channel_0_spatial_image = si.to_spatial_image(
-        image_0_numpy,
+        channel_0_numpy,
         dims=axes_names,
         scale=pixel_sizes,
-        name=channel0,
+        name=channel0["channel_label"],
     )
-    image_1_numpy = (
-        images.get_roi(roi, c=channel_1_idx, mode="numpy").astype("uint16").squeeze()
-    )
+
     channel_1_spatial_image = si.to_spatial_image(
-        image_1_numpy,
+        channel_1_numpy,
         dims=axes_names,
         scale=pixel_sizes,
-        name=channel1,
+        name=channel1["channel_label"],
     )
 
     valid_features = tuple(ColocalizationFeature(e) for e in features)
