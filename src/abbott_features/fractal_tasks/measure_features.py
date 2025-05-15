@@ -61,7 +61,7 @@ def measure_features(
     measure_intensity_features: Optional[IntensityFeaturesInputModel] = None,
     measure_distance_features: Optional[DistanceFeaturesInputModel] = None,
     measure_colocalization_features: Optional[ColocalizationFeaturesInputModel] = None,
-    measure_neighborhood_features: Optional[NeighborhoodFeaturesInputModel] = None,
+    measure_neighborhood_features: NeighborhoodFeaturesInputModel = NeighborhoodFeaturesInputModel(),  # noqa: E501
     z_decay_correction: Optional[str] = None,  # TODO: implement
     t_decay_correction: Optional[str] = None,  # TODO: implement
     output_table_name: Optional[str] = None,

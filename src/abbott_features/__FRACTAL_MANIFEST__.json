@@ -173,6 +173,10 @@
           },
           "measure_neighborhood_features": {
             "$ref": "#/$defs/NeighborhoodFeaturesInputModel",
+            "default": {
+              "measure": false,
+              "label_img_mask": null
+            },
             "title": "Measure Neighborhood Features",
             "description": "If `measure` is set to True, neighborhood features will be measured. If neighborhood is measured in e.g. `embryo` or `organoid` segmentation provide the `label_img_mask`."
           },
