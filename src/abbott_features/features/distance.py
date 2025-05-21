@@ -1,7 +1,7 @@
 """Functions to extract distance features."""
 
 from functools import partial
-from typing import NamedTuple
+from typing import NamedTuple, Union
 
 import itk
 import ngio
@@ -64,8 +64,10 @@ class LabelObject(NamedTuple):
 
 
 def get_distance_features(
-    label_image: ngio.images.label.Label,
-    label_image_to: ngio.images.label.Label,
+    label_image: Union[ngio.images.label.Label, ngio.images.masked_image.MaskedLabel],
+    label_image_to: Union[
+        ngio.images.label.Label, ngio.images.masked_image.MaskedLabel
+    ],
     roi: ngio.common._roi.Roi,
     distance_transforms: tuple[DistanceFunction, ...] = tuple(DefaultDistanceFunction),
     features: tuple[DistanceFeature, ...] = tuple(DefaultDistanceFeature),
@@ -82,15 +84,21 @@ def get_distance_features(
     scale = label_image.pixel_size.as_dict()
 
     # Convert the label images to spatial_images
-    label_numpy = label_image.get_roi(roi).astype("uint16")
+    if isinstance(label_image, ngio.images.masked_image.MaskedLabel):
+        label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
+    else:
+        label_numpy = label_image.get_roi(roi).astype("uint16")
+
     label_spatial_image = si.to_spatial_image(
         label_numpy,
         dims=dims,
         scale=scale,
         name=label_image.meta.name,
     )
-
-    label_numpy_to = label_image_to.get_roi(roi).astype("uint16")
+    if isinstance(label_image_to, ngio.images.masked_image.MaskedLabel):
+        label_numpy_to = label_image_to.get_roi_masked(int(roi.name)).astype("uint16")
+    else:
+        label_numpy_to = label_image_to.get_roi(roi).astype("uint16")
     label_spatial_image_to = si.to_spatial_image(
         label_numpy_to,
         dims=dims,
