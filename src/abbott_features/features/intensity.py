@@ -1,6 +1,6 @@
 """Functions to extract intensity features."""
 
-from typing import TypeAlias
+from typing import TypeAlias, Union
 
 import ngio
 import polars as pl
@@ -13,7 +13,7 @@ IntensityFeaturesLike: TypeAlias = tuple[IntensityFeature, ...] | tuple[str, ...
 
 
 def get_intensity_features(
-    label_image: ngio.images.label.Label,
+    label_image: Union[ngio.images.label.Label, ngio.images.masked_image.MaskedLabel],
     images: ngio.images.image.Image,
     channel_label: str,
     roi: ngio.common._roi.Roi,
@@ -23,7 +23,11 @@ def get_intensity_features(
     axes_names = label_image.axes_mapper.on_disk_axes_names
     pixel_sizes = label_image.pixel_size.as_dict()
 
-    label_numpy = label_image.get_roi(roi).astype("uint16")
+    if isinstance(label_image, ngio.images.masked_image.MaskedLabel):
+        label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
+    else:
+        label_numpy = label_image.get_roi(roi).astype("uint16")
+
     label_spatial_image = si.to_spatial_image(
         label_numpy,
         dims=axes_names,

@@ -57,7 +57,7 @@ class DefaultLabelFeature(PascalCaseStrEnum):
     ELONGATION = auto()
     FLATNESS = auto()
     ROUNDNESS = auto()
-    FERET_DIAMETER = auto()
+    # FERET_DIAMETER = auto()
     PERIMETER = auto()
     EQUIVALENT_SPHERICAL_PERIMETER = auto()
     EQUIVALENT_SPHERICAL_RADIUS = auto()

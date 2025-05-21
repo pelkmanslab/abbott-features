@@ -6,6 +6,7 @@ from typing import (
     Literal,
     NamedTuple,
     TypeAlias,
+    Union,
 )
 
 import ngio
@@ -85,7 +86,7 @@ RESOURCE_COLUMNS = ("channel0", "channel1")
 
 
 def get_colocalization_features(
-    label_image: ngio.images.label.Label,
+    label_image: Union[ngio.images.label.Label, ngio.images.masked_image.MaskedLabel],
     channel0: dict[str, Path],
     channel1: dict[str, Path],
     *,
@@ -104,7 +105,11 @@ def get_colocalization_features(
     pixel_sizes = label_image.pixel_size.as_dict()
 
     # Get the label image
-    label_numpy = label_image.get_roi(roi).astype("uint16")
+    if isinstance(label_image, ngio.images.masked_image.MaskedLabel):
+        label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
+    else:
+        label_numpy = label_image.get_roi(roi).astype("uint16")
+
     label_spatial_image = si.to_spatial_image(
         label_numpy,
         dims=axes_names,

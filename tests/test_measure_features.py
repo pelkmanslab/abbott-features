@@ -56,8 +56,11 @@ def test_measure_features(test_data_dir):
         measure_features(
             zarr_url=zarr_url,
             label_name="nuclei",
+            parent_label_names=["emb_linked"],
             reference_acquisition="0",
             level="0",
+            use_masks=True,
+            masking_label_name="emb_linked",
             ROI_table_name="emb_ROI_table_2_linked",
             measure_label_features=True,
             measure_intensity_features=measure_intensity_features,
@@ -79,6 +82,8 @@ def test_measure_features(test_data_dir):
         label_name="nuclei",
         reference_acquisition="0",
         level="0",
+        use_masks=True,
+        masking_label_name="emb_linked",
         ROI_table_name="emb_ROI_table_2_linked",
         measure_label_features=False,
         measure_intensity_features=measure_intensity_features,
@@ -86,7 +91,7 @@ def test_measure_features(test_data_dir):
     )
     store = Path(zarr_urls[0]) / "tables/nuclei"
     table_loaded = open_table(store=store)
-    assert table_loaded.dataframe.shape == (5537, 17)
+    assert table_loaded.dataframe.shape == (5460, 17)
 
     # Test validation of measure_neighborhood_features if measure is False
     with pytest.raises(ValidationError):
@@ -99,7 +104,36 @@ def test_measure_features(test_data_dir):
             label_name="nuclei",
             reference_acquisition="0",
             level="0",
+            use_masks=True,
+            masking_label_name="emb_linked",
             ROI_table_name="emb_ROI_table_2_linked",
             measure_label_features=True,
             overwrite=False,
         )
+
+    # Test passing non masking_roi_table with use_masks=True
+    with pytest.raises(NgioValueError):
+        measure_features(
+            zarr_url=zarr_urls[0],
+            label_name="nuclei",
+            reference_acquisition="0",
+            level="0",
+            use_masks=True,
+            masking_label_name="emb_linked",
+            ROI_table_name="FOV_ROI_table",
+            measure_label_features=True,
+            overwrite=False,
+        )
+
+    # Measure embryo level features
+    measure_features(
+        zarr_url=zarr_urls[0],
+        label_name="emb_linked",
+        reference_acquisition="0",
+        level="0",
+        use_masks=True,
+        masking_label_name="emb_linked",
+        ROI_table_name="emb_ROI_table_2_linked",
+        measure_label_features=True,
+        overwrite=True,
+    )
