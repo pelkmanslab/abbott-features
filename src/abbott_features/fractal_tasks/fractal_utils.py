@@ -150,3 +150,18 @@ def get_zarrurl_from_image_label(well_url: Path, channel_label: str, level: str 
 
         if channel_label in channel_labels:
             return zarr_url
+
+
+class AcquisitionFolderInputModel(BaseModel):
+    """Get the acquisition id and the path to the directory containing
+
+    the raw images and .mrf/mlf files.
+
+    Attributes:
+        acquisition: Acquistion (cycle) number.
+        image_dir: path to the folder that contains the Cellvoyager
+            image files and the MeasurementData & MeasurementDetail metadata files.
+    """
+
+    acquisition: int = None
+    image_dir: str = None

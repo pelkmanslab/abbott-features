@@ -66,7 +66,7 @@ def measure_features(
     measure_colocalization_features: Optional[ColocalizationFeaturesInputModel] = None,
     measure_neighborhood_features: NeighborhoodFeaturesInputModel = NeighborhoodFeaturesInputModel(),  # noqa: E501
     z_decay_correction: Optional[str] = None,  # TODO: implement
-    t_decay_correction: Optional[str] = None,  # TODO: implement
+    t_decay_correction: Optional[str] = None,
     ROI_table_name: str,
     use_masks: bool = True,
     masking_label_name: Optional[str] = None,
@@ -106,7 +106,8 @@ def measure_features(
             features will be measured. If neighborhood is measured in e.g. `embryo`
             or `organoid` segmentation provide the `label_img_mask`.
         z_decay_correction: TODO
-        t_decay_correction: TODO
+        t_decay_correction: Name of time decay correction table. Assumed to be in
+            the directory containing the zarr files.
         ROI_table_name: Name of the ROI table over which the task loops to
             measure label features. Examples: `FOV_ROI_table` => loop over
             the field of views, `organoid_ROI_table` => loop over the organoid

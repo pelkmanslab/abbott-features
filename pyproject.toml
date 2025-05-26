@@ -36,6 +36,7 @@ dependencies = ["ngio @ git+https://github.com/rhornb/ngio.git@dev",
                 "strenum",
                 "numba",
                 "networkx[default]",
+                "fractal-tasks-core",
                 "fractal-task-tools",]
 
 # Optional dependencies (e.g. for `pip install -e ".[dev]"`, see

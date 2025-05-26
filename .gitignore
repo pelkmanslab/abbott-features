@@ -115,4 +115,4 @@ ENV/
 *.zarr
 
 # Test data loaded via pooch
-tests/data/
+tests/data/10_5281_zenodo_15343366
