@@ -12,6 +12,7 @@ from typing import (
 import ngio
 import numpy as np
 import polars as pl
+import spatial_image as si
 from scipy.stats import chi2_contingency, kendalltau, pearsonr, spearmanr
 from skimage.measure import regionprops_table
 from sklearn.metrics import mutual_info_score, normalized_mutual_info_score
@@ -19,6 +20,9 @@ from sklearn.metrics import mutual_info_score, normalized_mutual_info_score
 from abbott_features.features.constants import (
     ColocalizationFeature,
     DefaultColocalizationFeature,
+)
+from abbott_features.intensity_normalization.models import (
+    apply_t_decay_factor,
 )
 
 
@@ -91,6 +95,7 @@ def get_colocalization_features(
     *,
     level: str,
     roi: ngio.common._roi.Roi,
+    kwargs_decay_corr: dict,
     features: tuple[ColocalizationFeature, ...] = tuple(DefaultColocalizationFeature),
     index_columns: tuple[Literal["label", "label_image"], ...] = ("label",),
     index_prefix: str | None = None,
@@ -100,12 +105,14 @@ def get_colocalization_features(
     return_metadata: bool = False,
 ) -> pl.DataFrame:
     """Get colocalization features from a label image and two channels."""
+    axes_names = label_image.axes_mapper.on_disk_axes_names
+    pixel_sizes = label_image.pixel_size.as_dict()
+
     # Get the label image
     if isinstance(label_image, ngio.images.masked_image.MaskedLabel):
         lbls = label_image.get_roi_masked(int(roi.name)).astype("uint16")
     else:
         lbls = label_image.get_roi(roi).astype("uint16")
-
     # Get the channel images
     channel_0_images = ngio.open_ome_zarr_container(
         channel0["channel_zarr_url"]
@@ -113,12 +120,31 @@ def get_colocalization_features(
     channel_0_idx = channel_0_images.meta.get_channel_idx(
         label=channel0["channel_label"]
     )
+
+    # Get the first channel image
     img1 = (
         channel_0_images.get_roi(roi, c=channel_0_idx, mode="numpy")
         .astype("uint16")
         .squeeze()
     )
 
+    img1_si = si.to_spatial_image(
+        img1,
+        dims=axes_names,
+        scale=pixel_sizes,
+        name=channel0["channel_label"],
+    )
+
+    # Apply corrections if provided
+    if kwargs_decay_corr["t_decay_correction_df"] is not None:
+        img1_si = apply_t_decay_factor(
+            img1_si,
+            kwargs_decay_corr,
+            ROI_id=roi.name,
+        )
+    img1 = img1_si.to_numpy()
+
+    # Get the second channel image
     channel_1_images = ngio.open_ome_zarr_container(
         channel1["channel_zarr_url"]
     ).get_image(path=level)
@@ -130,6 +156,20 @@ def get_colocalization_features(
         .astype("uint16")
         .squeeze()
     )
+    img2_si = si.to_spatial_image(
+        img2,
+        dims=axes_names,
+        scale=pixel_sizes,
+        name=channel1["channel_label"],
+    )
+    # Apply corrections if provided
+    if kwargs_decay_corr["t_decay_correction_df"] is not None:
+        img2_si = apply_t_decay_factor(
+            img2_si,
+            kwargs_decay_corr,
+            ROI_id=roi.name,
+        )
+    img2 = img2_si.to_numpy()
 
     valid_features = tuple(ColocalizationFeature(e) for e in features)
 

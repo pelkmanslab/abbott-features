@@ -490,3 +490,29 @@ def lazy_apply_model_to_channel(
 
     else:
         raise ValueError(f"Unkown model feature names: {model._feature_names=}")
+
+
+def apply_t_decay_factor(
+    channel_si: SpatialImage,
+    kwargs_decay_correction: dict,
+    ROI_id: str,
+    maintain_image_dtype: bool = True,
+) -> SpatialImage:
+    """Apply time decay correction factor to a channel spatial image."""
+    df_correction_factors = kwargs_decay_correction["t_decay_correction_df"]
+    correction_factor = (
+        df_correction_factors.filter(
+            (pl.col("channel") == channel_si.name) & (pl.col("ROI") == int(ROI_id))
+        )
+        .select(pl.col("correctionFactor"))
+        .item()
+    )
+
+    # Check if the correction factor is not nan
+    if np.isnan(correction_factor):
+        raise ValueError(f"Correction factor for channel {channel_si.name} is NaN.")
+
+    channel_si_out = channel_si * correction_factor
+    if maintain_image_dtype:
+        channel_si_out = channel_si_out.astype(channel_si.dtype)
+    return channel_si_out.rename("image")

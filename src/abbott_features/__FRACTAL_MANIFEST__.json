@@ -120,6 +120,28 @@
             },
             "title": "NeighborhoodFeaturesInputModel",
             "type": "object"
+          },
+          "TimeDecayInputModel": {
+            "description": "Get the path to the time decay table and the correction Factor to use.",
+            "properties": {
+              "model_type": {
+                "enum": [
+                  "correctionFactor-Exp",
+                  "correctionFactor-ExpNoOffset",
+                  "correctionFactor-Linear",
+                  "correctionFactor-LogLinear"
+                ],
+                "title": "Model Type",
+                "type": "string"
+              },
+              "table_name": {
+                "default": "time_decay_models",
+                "title": "Table Name",
+                "type": "string"
+              }
+            },
+            "title": "TimeDecayInputModel",
+            "type": "object"
           }
         },
         "additionalProperties": false,
@@ -205,9 +227,13 @@
             "description": "TODO"
           },
           "t_decay_correction": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/TimeDecayInputModel"
+              }
+            ],
             "title": "T Decay Correction",
-            "type": "string",
-            "description": "Name of time decay correction table. Assumed to be in the directory containing the zarr files."
+            "description": "Takes the time decay correction factor `model_type` and `table_name` of the dataframe that contains the correction factors."
           },
           "ROI_table_name": {
             "title": "Roi Table Name",
@@ -277,6 +303,10 @@
                 "type": "string"
               }
             },
+            "required": [
+              "acquisition",
+              "image_dir"
+            ],
             "title": "AcquisitionFolderInputModel",
             "type": "object"
           }
@@ -302,7 +332,7 @@
             },
             "title": "Acquisition Params",
             "type": "array",
-            "description": "A list of `AcquisitionFolderInputModel` s, taking the following parameters: - acquisition: Acquisition (cycle) int. - image_dir: Path to the folder that contains the Cellvoyager image files and the MeasurementData & MeasurementDetail metadata files."
+            "description": "A list of `AcquisitionFolderInputModel` s, taking the acquisition int and path to the folder that contains the Cellvoyager image files and the MeasurementData & MeasurementDetail metadata files."
           },
           "mrf_filename": {
             "default": "MeasurementDetail.mrf",

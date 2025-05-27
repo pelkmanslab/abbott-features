@@ -26,7 +26,7 @@ from ngio import open_ome_zarr_plate
 from ngio.tables.v1 import GenericTable
 from pydantic import validate_call
 
-from abbott_features.fractal_tasks.fractal_utils import AcquisitionFolderInputModel
+from abbott_features.fractal_tasks.io_models import AcquisitionFolderInputModel
 from abbott_features.intensity_normalization.polars_selector import sel
 from abbott_features.intensity_normalization.polars_utils import (
     get_correlation_by_acquisition_map,
@@ -75,10 +75,8 @@ def cellvoyager_time_decay(
             created.
             (standard argument for Fractal tasks, managed by Fractal server).
         acquisition_params: A list of `AcquisitionFolderInputModel` s, taking
-            the following parameters:
-            - acquisition: Acquisition (cycle) int.
-            - image_dir: Path to the folder that contains the Cellvoyager
-                image files and the MeasurementData & MeasurementDetail metadata files.
+            the acquisition int and path to the folder that contains the Cellvoyager
+            image files and the MeasurementData & MeasurementDetail metadata files.
         mrf_filename: Name of the .mrf file. Default is "MeasurementDetail.mrf".
         mlf_filename: Name of the .mlf file. Default is "MeasurementData.mlf".
         feature_table_name: Name of the feature table to be used for time decay
