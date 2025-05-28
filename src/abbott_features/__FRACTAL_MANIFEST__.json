@@ -223,7 +223,7 @@
           "z_decay_correction": {
             "title": "Z Decay Correction",
             "type": "string",
-            "description": "Name of z-decay model to use. Models are stored in /path_to_zarr_plate/models/z_decay/ . "
+            "description": "Name of z-decay model to use. Models are stored in /path_to_zarr_plate/models/z_decay/ ."
           },
           "t_decay_correction": {
             "allOf": [
@@ -491,7 +491,7 @@
             "default": 0.8,
             "title": "Roundness Cutoff",
             "type": "number",
-            "description": "Missing description"
+            "description": "Float value defining the cutoff for the roundness of the objects to be included in the time decay models."
           },
           "control_wells": {
             "items": {
@@ -499,7 +499,7 @@
             },
             "title": "Control Wells",
             "type": "array",
-            "description": "List of wells to be excluded from the time decay models. If None, no wells are excluded. E.g. [\"B03\", \"B04\"]."
+            "description": "List of wells to be excluded from the z-decay models. If None, no wells are excluded. E.g. [\"B03\", \"B04\"]."
           },
           "alignment_score_cutoff": {
             "default": 0.8,
@@ -515,7 +515,7 @@
             ],
             "title": "Loss",
             "type": "string",
-            "description": "Missing description"
+            "description": "Loss function to use for the model fitting. Can be \"linear\" or \"huber\"."
           },
           "overwrite": {
             "default": true,

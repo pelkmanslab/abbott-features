@@ -223,7 +223,6 @@ def measure_features(
                 .select(["ROI", "channel", t_decay_correction.correction_factor])
                 .rename({t_decay_correction.correction_factor: "correctionFactor"})
             )
-            print(df_t_corr)
 
         except NgioValueError as err:
             raise KeyError(
@@ -299,7 +298,6 @@ def measure_features(
             if channel_labels:
                 channel_roi_table_list = []
                 for channel_label in channel_labels:
-                    print(channel_label)
                     channel_roi_table = get_intensity_features(
                         label_image=label_img,
                         images=images,
