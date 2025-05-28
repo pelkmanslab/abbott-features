@@ -40,4 +40,17 @@ TASK_LIST = [
         modality="HCS",
         docs_info="file:docs_info/cellvoyager_time_decay.md",
     ),
+    NonParallelTask(
+        name="Get Z Decay Models",
+        executable="fractal_tasks/z_decay.py",
+        meta={"cpus_per_task": 4, "mem": 16000},
+        category="Measurement",
+        tags=[
+            "3D",
+            "Intensity Correction",
+            "Feature Table",
+        ],
+        modality="HCS",
+        docs_info="file:docs_info/z_decay.md",
+    ),
 ]

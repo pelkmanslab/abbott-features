@@ -938,8 +938,8 @@ def stack_column_name_to_column(
             .rename(rename_map)
             .drop_nulls(list(rename_map.values()))
             .select(
-                pl.col([*index, column_name]),
-                pl.exclude([*index, column_name]),
+                pl.col(*list(index), column_name),
+                pl.exclude(*list(index), column_name),
             )
         )
     if return_list:
@@ -1039,6 +1039,93 @@ def select_numeric_and_nested(df: pl.DataFrame) -> pl.DataFrame:
             if dtype in [pl.Struct, pl.List, *pl.NUMERIC_DTYPES]
         ]
     )
+
+
+# def apply_colormap(s: pl.Series, cmap=cc.m_glasbey) -> pl.Series:
+#     unique_values = s.unique().sort().to_list()
+#     color_map = {v: cmap(unique_values.index(v)) for v in unique_values}
+#     return s.map_dict(color_map)
+
+
+# def plot_df_nulls(
+#     df: pl.DataFrame,
+#     index: tuple[str, ...] = ("roi", "object", "label"),
+#     row_color_columns: tuple[str, ...] | None = None,
+#     subsample_by: int | None = None,
+#     title: str | None = None,
+#     **kwargs,
+# ):
+#     df = df.fill_nan(None)
+#     if subsample_by is not None:
+#         df_samp = df.gather_every(subsample_by)
+#     else:
+#         df_samp = df
+
+#     # pdf_index = df.select(pl.col(e) for e in index).to_pandas()
+#     pdf_cats = (
+#         None
+#         if row_color_columns is None
+#         else df_samp.select(
+#             pl.col(e).map(apply_colormap) for e in row_color_columns
+#         ).to_pandas()
+#     )
+
+#     feature_columns = sorted(
+#         list(set(df_samp.pipe(select_numeric_and_nested).columns).difference(index)),
+#         key=df_samp.columns.index,
+#     )
+#     pdf_features_is_null = (
+#         df_samp.select(feature_columns).select(pl.all().is_null()).to_pandas()
+#     )
+#     nan_percentage = pdf_features_is_null.sum().sum() / pdf_features_is_null.size
+
+#     default_params = dict(
+#         figsize=(5, 6),
+#         row_cluster=False,
+#         col_cluster=False,
+#         cmap=sns.color_palette(list("gr"), as_cmap=True),
+#         cbar_pos=(0.02, 0.5, 0.1, 0.05),
+#         cbar_kws={"boundaries": [0, 0.5, 1], "orientation": "horizontal"},
+#         row_colors=pdf_cats,
+#         vmin=0,
+#         vmax=1,
+#     )
+
+#     g = sns.clustermap(
+#         pdf_features_is_null,
+#         **{
+#             **default_params,
+#             **kwargs,
+#         },
+#     )
+
+#     if g.ax_cbar:
+#         g.ax_cbar.set_xticks([0.25, 0.75])
+#         g.ax_cbar.xaxis.tick_top()
+#         g.ax_cbar.set_xticklabels(
+#             ["not null", f"null ({nan_percentage:.2f})"],
+#             rotation=90,  # , verticalalignment="center"
+#         )
+
+#     if g.ax_row_colors:
+#         g.ax_row_colors.xaxis.tick_top()
+#         xticklabels = g.ax_row_colors.get_xticklabels()
+#         g.ax_row_colors.set_xticklabels(xticklabels, rotation=90)
+
+#     g.ax_heatmap.xaxis.tick_top()
+#     xticklabels = g.ax_heatmap.get_xticklabels()
+#     g.ax_heatmap.set_xticklabels(xticklabels, rotation=90)
+#     g.ax_heatmap.set_yticks([])
+#     g.ax_heatmap.set_xlabel(f"{pdf_features_is_null.shape[1]}")
+#     g.ax_heatmap.set_ylabel(
+#         f"{pdf_features_is_null.shape[0]:,}{f' out of {df.shape[0]:,}'}"
+#     )
+
+#     return g
+
+# def pipe_df_nulls(df, **kwargs):
+#     plot_df_nulls(df, **kwargs)
+#     return df
 
 
 def plot_null_columns(

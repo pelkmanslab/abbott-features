@@ -23,6 +23,7 @@ from abbott_features.features.constants import (
 )
 from abbott_features.intensity_normalization.models import (
     apply_t_decay_factor,
+    apply_z_decay_models,
 )
 
 
@@ -111,8 +112,20 @@ def get_colocalization_features(
     # Get the label image
     if isinstance(label_image, ngio.images.masked_image.MaskedLabel):
         lbls = label_image.get_roi_masked(int(roi.name)).astype("uint16")
+        lbls_si = si.to_spatial_image(
+            lbls,
+            dims=axes_names,
+            scale=pixel_sizes,
+            name=label_image.meta.name,
+        )
     else:
         lbls = label_image.get_roi(roi).astype("uint16")
+        lbls_si = si.to_spatial_image(
+            lbls,
+            dims=axes_names,
+            scale=pixel_sizes,
+            name=label_image.meta.name,
+        )
     # Get the channel images
     channel_0_images = ngio.open_ome_zarr_container(
         channel0["channel_zarr_url"]
@@ -136,10 +149,18 @@ def get_colocalization_features(
     )
 
     # Apply corrections if provided
+    if kwargs_decay_corr["z_decay_correction"] is not None:
+        z_decay_model = kwargs_decay_corr["z_decay_correction"]
+        img1_si = apply_z_decay_models(
+            z_decay_model,
+            img1_si,
+            lbls_si,
+        )
     if kwargs_decay_corr["t_decay_correction_df"] is not None:
+        correction_factors_df = kwargs_decay_corr["t_decay_correction_df"]
         img1_si = apply_t_decay_factor(
             img1_si,
-            kwargs_decay_corr,
+            correction_factors_df,
             ROI_id=roi.name,
         )
     img1 = img1_si.to_numpy()
@@ -163,10 +184,18 @@ def get_colocalization_features(
         name=channel1["channel_label"],
     )
     # Apply corrections if provided
+    if kwargs_decay_corr["z_decay_correction"] is not None:
+        z_decay_model = kwargs_decay_corr["z_decay_correction"]
+        img2_si = apply_z_decay_models(
+            z_decay_model,
+            img2_si,
+            lbls_si,
+        )
     if kwargs_decay_corr["t_decay_correction_df"] is not None:
+        correction_factors_df = kwargs_decay_corr["t_decay_correction_df"]
         img2_si = apply_t_decay_factor(
             img2_si,
-            kwargs_decay_corr,
+            correction_factors_df,
             ROI_id=roi.name,
         )
     img2 = img2_si.to_numpy()

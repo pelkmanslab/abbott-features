@@ -51,6 +51,9 @@ from abbott_features.fractal_tasks.io_models import (
     NeighborhoodFeaturesInputModel,
     TimeDecayInputModel,
 )
+from abbott_features.intensity_normalization.models import (
+    read_models,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +73,8 @@ def measure_features(
     measure_distance_features: Optional[DistanceFeaturesInputModel] = None,
     measure_colocalization_features: Optional[ColocalizationFeaturesInputModel] = None,
     measure_neighborhood_features: NeighborhoodFeaturesInputModel = NeighborhoodFeaturesInputModel(),  # noqa: E501
-    z_decay_correction: Optional[str] = None,  # TODO: implement
-    t_decay_correction: TimeDecayInputModel = None,
+    z_decay_correction: Optional[str] = None,
+    t_decay_correction: Optional[TimeDecayInputModel] = None,
     ROI_table_name: str,
     use_masks: bool = True,
     masking_label_name: Optional[str] = None,
@@ -110,9 +113,11 @@ def measure_features(
         measure_neighborhood_features: If `measure` is set to True, neighborhood
             features will be measured. If neighborhood is measured in e.g. `embryo`
             or `organoid` segmentation provide the `label_img_mask`.
-        z_decay_correction: TODO
-        t_decay_correction: Takes the time decay correction factor `model_type` and
-            `table_name` of the dataframe that contains the correction factors.
+        z_decay_correction: Name of z-decay model to use. Models are stored in
+            /path_to_zarr_plate/models/z_decay/ .
+        t_decay_correction: Takes the time decay correction factor
+            `correction_factor` and `table_name` of the dataframe that contains
+            the correction factors.
         ROI_table_name: Name of the ROI table over which the task loops to
             measure label features. Examples: `FOV_ROI_table` => loop over
             the field of views, `organoid_ROI_table` => loop over the organoid
@@ -206,9 +211,8 @@ def measure_features(
     ome_zarr_plate = open_ome_zarr_plate(zarr_plate)
     well = get_well_from_zarrurl(zarr_url)
 
-    if t_decay_correction is None:
-        logging.info("No time-decay correction factors provided, skipping.")
-    else:
+    # Load time-decay correction dataframe if provided
+    if t_decay_correction is not None:
         try:
             df_t_corr = (
                 pl.from_pandas(
@@ -216,9 +220,10 @@ def measure_features(
                     include_index=True,
                 )
                 .filter(pl.col("well") == well)
-                .select(["ROI", "channel", t_decay_correction.model_type])
-                .rename({t_decay_correction.model_type: "correctionFactor"})
+                .select(["ROI", "channel", t_decay_correction.correction_factor])
+                .rename({t_decay_correction.correction_factor: "correctionFactor"})
             )
+            print(df_t_corr)
 
         except NgioValueError as err:
             raise KeyError(
@@ -229,6 +234,18 @@ def measure_features(
         logging.info(
             f"Using time-decay correction factors from {t_decay_correction=} table."
         )
+    else:
+        df_t_corr = None
+        logging.info("No time-decay correction table provided, skipping.")
+
+    # Load z-decay correction model if provided
+    if z_decay_correction is not None:
+        model_fld = Path(zarr_plate) / "models/z_decay" / z_decay_correction
+        z_decay_model = read_models(model_fld)
+        logging.info(f"{z_decay_model=}")
+    else:
+        z_decay_model = None
+        logging.info("No z-decay correction model provided, skipping.")
 
     logging.info(f"Start feature measurement for {label_name=} and {zarr_url=}")
 
@@ -239,12 +256,8 @@ def measure_features(
         logger.info(f"Now processing ROI {i_ROI+1}/{num_ROIs}")
 
         kwargs_decay_corr = {
-            "t_decay_correction_df": df_t_corr
-            if t_decay_correction is not None
-            else None,
-            "z_decay_correction": z_decay_correction
-            if z_decay_correction is not None
-            else None,
+            "t_decay_correction_df": df_t_corr,
+            "z_decay_correction": z_decay_model,
         }
 
         # Measure features per ROI
@@ -286,6 +299,7 @@ def measure_features(
             if channel_labels:
                 channel_roi_table_list = []
                 for channel_label in channel_labels:
+                    print(channel_label)
                     channel_roi_table = get_intensity_features(
                         label_image=label_img,
                         images=images,

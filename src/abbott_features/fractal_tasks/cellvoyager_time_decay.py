@@ -238,7 +238,7 @@ def cellvoyager_time_decay(
     )
 
     # Remove mitotic etc. labels
-    ax = sns.kdeplot(df_label.to_pandas(), x="EquivalentSphericalRadius")
+    ax = sns.kdeplot(data=df_label.to_pandas(), x="EquivalentSphericalRadius")
     y_lims = ax.get_ylim()
     plt.vlines(
         x=spherical_radius_cutoff,

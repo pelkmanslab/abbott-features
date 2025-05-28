@@ -148,24 +148,26 @@ class TimeDecayInputModel(BaseModel):
     """Get the path to the time decay table and the correction Factor to use.
 
     Attributes:
-        model_type: Literal for the type of time decay model to use.
+        correction_factor: Literal for the type of time decay model to use.
         table_name: Name of the table containing the time decay correction factors.
     """
 
-    model_type: Literal[
+    correction_factor: Literal[
         "correctionFactor-Exp",
         "correctionFactor-ExpNoOffset",
         "correctionFactor-Linear",
         "correctionFactor-LogLinear",
     ] = None
-    table_name: str = "time_decay_models"
+    table_name: str = None
 
     @model_validator(mode="after")
     def inclusive_channel_attributes(self: Self) -> Self:
-        """Check that both `table_name` and `model_type` are set."""
-        model_type = self.model_type
+        """Check that both `table_name` and `correction_factor` are set."""
+        correction_factor = self.correction_factor
         table_name = self.table_name
 
-        if model_type is None and table_name:
-            raise ValueError("`model_type` cannot be None if `table_name` is set.")
+        if correction_factor is None and table_name:
+            raise ValueError(
+                "`correction_factor` cannot be None if `table_name` is set."
+            )
         return self

@@ -2,15 +2,15 @@
 
 import copy
 import json
+import os
 import pickle
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Callable, TypeAlias
 
 import dask
-import dask.array as da
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -410,37 +410,6 @@ def fit_model_to_df(
     return model_copy
 
 
-def apply_model_to_channel(
-    model: Model,
-    channel_si: SpatialImage,
-    label_si: SpatialImage | None = None,
-) -> SpatialImage:
-    if model._feature_names == ["Centroid-z"]:
-        correction_factors = model._correction_factor(
-            channel_si.coords["z"].expand_dims(["_"], -1)
-        )
-        if isinstance(correction_factors, np.ndarray):
-            correction_factors = xr.DataArray(
-                correction_factors, coords={"z": channel_si.coords["z"]}
-            )
-        return (channel_si * correction_factors).rename("image")
-
-    elif model._feature_names == ["MediumPath", "EmbryoPath"]:
-        assert (
-            label_si is not None
-        ), "Provide embryo segmentation for 2-step correction."
-        embryo_path_si = (label_si * label_si.meta.scale_dict["z"]).cumsum(dim="z")
-        medium_path_si = (
-            ~label_si.astype(bool) * label_si.meta.scale_dict["z"]
-        ).cumsum(dim="z")
-        X = da.stack([medium_path_si.data.flatten(), embryo_path_si.data.flatten()]).T
-        correction_factors = model._correction_factor(X).T.reshape(channel_si.shape)
-        return (channel_si * correction_factors).rename("image")
-
-    else:
-        raise ValueError(f"Unkown model feature names: {model._feature_names=}")
-
-
 def lazy_apply_model_to_channel(
     model: Model,
     channel_si: SpatialImage,
@@ -466,12 +435,12 @@ def lazy_apply_model_to_channel(
         assert (
             label_si is not None
         ), "Provide embryo segmentation for 2-step correction."
-        embryo_path_si = (label_si_da).cumsum(dim="z") * label_si_da.meta.scale_dict[
-            "z"
-        ]
+        embryo_path_si = (label_si_da).cumsum(dim="z") * label_si_da.attrs[
+            "scale_dict"
+        ]["z"]
         medium_path_si = (~label_si_da.astype(bool)).cumsum(
             dim="z"
-        ) * label_si_da.meta.scale_dict["z"]
+        ) * label_si_da.attrs["scale_dict"]["z"]
 
         with dask.config.set(**{"array.slicing.split_large_chunks": False}):
             X = np.stack(
@@ -492,16 +461,40 @@ def lazy_apply_model_to_channel(
         raise ValueError(f"Unkown model feature names: {model._feature_names=}")
 
 
+def apply_z_decay_models(
+    models: Mapping[str, Model | None] | None,
+    channel_si: SpatialImage,
+    two_step_label_si: SpatialImage,
+    correction_factor_clip_range: tuple[float, float] | None = (0.0, 50.0),
+) -> SpatialImage:
+    if models is None:
+        return channel_si
+
+    model = models[channel_si.name]
+    if model is None:
+        channel_si_corr = channel_si
+    else:
+        assert model._feature_names is not None, "Model not fit."
+        if len(model._feature_names) != 2:
+            two_step_label_si = None
+        channel_si_corr = lazy_apply_model_to_channel(
+            model, channel_si, two_step_label_si, correction_factor_clip_range
+        )
+
+    channel_si_corr.name = channel_si.name
+
+    return channel_si_corr
+
+
 def apply_t_decay_factor(
     channel_si: SpatialImage,
-    kwargs_decay_correction: dict,
+    correction_factors_df: pl.DataFrame,
     ROI_id: str,
     maintain_image_dtype: bool = True,
 ) -> SpatialImage:
     """Apply time decay correction factor to a channel spatial image."""
-    df_correction_factors = kwargs_decay_correction["t_decay_correction_df"]
     correction_factor = (
-        df_correction_factors.filter(
+        correction_factors_df.filter(
             (pl.col("channel") == channel_si.name) & (pl.col("ROI") == int(ROI_id))
         )
         .select(pl.col("correctionFactor"))
@@ -515,4 +508,46 @@ def apply_t_decay_factor(
     channel_si_out = channel_si * correction_factor
     if maintain_image_dtype:
         channel_si_out = channel_si_out.astype(channel_si.dtype)
-    return channel_si_out.rename("image")
+
+    channel_si_out.name = channel_si.name
+    return channel_si_out
+
+
+def write_models(
+    models: dict,
+    root: Path | str,
+    write_params_json: bool = True,
+    overwrite: bool = True,
+):
+    """Write a nested dict to a nested file structure."""
+    for key, value in models.items():
+        # Create a directory for the current key
+        current_path = os.path.join(root, str(key))
+        os.makedirs(current_path, exist_ok=True)
+        if not overwrite and os.path.exists(current_path):
+            continue
+        # Recursively write sub-dictionaries or write the value to a file
+        if isinstance(value, dict):
+            write_models(value, current_path)
+        elif isinstance(value, Model):
+            value.save(
+                directory=current_path,
+                file_name="model",
+                mode="wb",
+                write_params_json=write_params_json,
+            )
+
+
+def read_models(root: Path | str):
+    """Read a nested file structure to a nested dict."""
+    result = {}
+    if not Path(root).exists():
+        raise FileNotFoundError(f"Path {root} does not exist.")
+    for item in os.listdir(root):
+        item_path = os.path.join(root, item)
+        if os.path.isdir(item_path):
+            # Recursively process subdirectories
+            result[item] = read_models(item_path)
+        elif os.path.isfile(item_path) and item_path.endswith(".pkl"):
+            result = Model.load(item_path)
+    return result

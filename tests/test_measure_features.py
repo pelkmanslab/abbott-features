@@ -7,9 +7,7 @@ from ngio.tables.tables_container import open_table
 from ngio.utils._errors import NgioValueError
 from pydantic import ValidationError
 
-from abbott_features.fractal_tasks.cellvoyager_time_decay import (
-    cellvoyager_time_decay,
-)
+from abbott_features.fractal_tasks.cellvoyager_time_decay import cellvoyager_time_decay
 from abbott_features.fractal_tasks.io_models import (
     AcquisitionFolderInputModel,
     ChannelInputModel,
@@ -21,6 +19,7 @@ from abbott_features.fractal_tasks.io_models import (
     TimeDecayInputModel,
 )
 from abbott_features.fractal_tasks.measure_features import measure_features
+from abbott_features.fractal_tasks.z_decay import z_decay
 
 
 @pytest.fixture(scope="function")
@@ -34,7 +33,7 @@ def test_data_dir(tmp_path: Path, zenodo_zarr: Path) -> str:
     return dest_dir
 
 
-def test_time_decay(test_data_dir):
+def test_decays(test_data_dir):
     level = "0"
     zarr_urls = [f"{test_data_dir}/B/03/0", f"{test_data_dir}/B/03/1"]
 
@@ -74,6 +73,19 @@ def test_time_decay(test_data_dir):
             overwrite=True,
         )
 
+    # Measure z decay models
+    z_decay(
+        zarr_urls=zarr_urls,
+        zarr_dir=test_data_dir,
+        feature_table_name="nuclei",
+        label_name="nuclei",
+        embryo_label_name="emb_linked",
+        spherical_radius_cutoff=(2, 8),
+        roundness_cutoff=0.8,
+        alignment_score_cutoff=0,
+        loss="huber",
+    )
+
     # Next time decay
     acquisition_params = [
         AcquisitionFolderInputModel(
@@ -91,7 +103,7 @@ def test_time_decay(test_data_dir):
         spherical_radius_cutoff=(2, 8),
     )
 
-    # Measure features with time decay correction
+    # Measure features with z&t decay correction
     measure_intensity_features = IntensityFeaturesInputModel(
         channels_to_include=[
             ChannelInputModel(label="DAPI_2"),
@@ -107,8 +119,8 @@ def test_time_decay(test_data_dir):
         ]
     )
 
-    time_decay_correction = TimeDecayInputModel(
-        model_type="correctionFactor-Linear", table_name="time_decay_models"
+    t_decay_correction = TimeDecayInputModel(
+        correction_factor="correctionFactor-Linear", table_name="time_decay_models"
     )
 
     for zarr_url in zarr_urls:
@@ -124,7 +136,8 @@ def test_time_decay(test_data_dir):
             measure_label_features=False,
             measure_intensity_features=measure_intensity_features,
             measure_colocalization_features=measure_colocalization_features,
-            t_decay_correction=time_decay_correction,
+            z_decay_correction="LogLinear(features=Centroid-z, loss=huber)",
+            t_decay_correction=t_decay_correction,
             output_table_name="nuclei_t_corrected",
             overwrite=True,
         )
