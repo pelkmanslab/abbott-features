@@ -348,32 +348,6 @@ class Exp(Model):
         return self.params[0] + self.params[1]
 
 
-def fit_model_to_wide_df(
-    df: pl.DataFrame,
-    model: Model,
-    X_columns: Sequence[str] = ("MediumPath", "EmbryoPath"),
-    y_column: str = "DAPI.1_Mean",
-    in_place: bool = False,
-) -> Model | None:
-    for column in [*list(X_columns), y_column]:
-        assert column in df, f"column `{column}` not in `df`"
-
-    if in_place:
-        model_copy = model
-    else:
-        model_copy = copy.deepcopy(model)
-
-    X = df.select(X_columns)
-    y = df[y_column]
-    try:
-        model_copy.fit(X, y)
-    except RuntimeError as e:
-        print(e)
-        print(f"no convergance for `{model!s}` with target `{y_column}`")
-        return None
-    return model_copy
-
-
 def fit_model_to_df(
     df: pd.DataFrame | pl.DataFrame,
     channel: str,
