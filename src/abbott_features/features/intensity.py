@@ -8,6 +8,10 @@ import spatial_image as si
 
 from abbott_features.features._base import get_si_features_df
 from abbott_features.features.constants import IntensityFeature
+from abbott_features.intensity_normalization.models import (
+    apply_t_decay_factor,
+    apply_z_decay_models,
+)
 
 IntensityFeaturesLike: TypeAlias = tuple[IntensityFeature, ...] | tuple[str, ...]
 
@@ -17,6 +21,7 @@ def get_intensity_features(
     images: ngio.images.image.Image,
     channel_label: str,
     roi: ngio.common._roi.Roi,
+    kwargs_decay_corr: dict,
     features: IntensityFeaturesLike = tuple(IntensityFeature),
 ) -> pl.DataFrame:
     """Get intensity features for a given label image and intensity image."""
@@ -44,6 +49,21 @@ def get_intensity_features(
         scale=pixel_sizes,
         name=channel_label,
     )
+
+    # Apply corrections if provided
+    if kwargs_decay_corr["z_decay_correction"] is not None:
+        z_decay_model = kwargs_decay_corr["z_decay_correction"]
+        intensity_spatial_image = apply_z_decay_models(
+            z_decay_model,
+            intensity_spatial_image,
+            label_spatial_image,
+        )
+
+    if kwargs_decay_corr["t_decay_correction_df"] is not None:
+        correction_factors_df = kwargs_decay_corr["t_decay_correction_df"]
+        intensity_spatial_image = apply_t_decay_factor(
+            intensity_spatial_image, correction_factors_df, ROI_id=roi.name
+        )
 
     valid_features = tuple(str(IntensityFeature(e)) for e in features)
     feature_table = get_si_features_df(
