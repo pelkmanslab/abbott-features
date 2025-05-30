@@ -69,10 +69,14 @@ def measure_features(
     reference_acquisition: Optional[int] = None,
     level: str = "0",
     measure_label_features: bool = False,
-    measure_intensity_features: Optional[IntensityFeaturesInputModel] = None,
+    measure_intensity_features: IntensityFeaturesInputModel = (
+        IntensityFeaturesInputModel()
+    ),
     measure_distance_features: Optional[DistanceFeaturesInputModel] = None,
     measure_colocalization_features: Optional[ColocalizationFeaturesInputModel] = None,
-    measure_neighborhood_features: NeighborhoodFeaturesInputModel = NeighborhoodFeaturesInputModel(),  # noqa: E501
+    measure_neighborhood_features: NeighborhoodFeaturesInputModel = (
+        NeighborhoodFeaturesInputModel()
+    ),
     z_decay_correction: Optional[str] = None,
     t_decay_correction: Optional[TimeDecayInputModel] = None,
     ROI_table_name: str,
@@ -190,7 +194,8 @@ def measure_features(
     images = ome_zarr_container.get_image(path=level)
 
     # Get channels to include/exclude
-    if measure_intensity_features is not None:
+    if measure_intensity_features.measure:
+        # If no channels to include or exclude, use all channels
         channel_labels = ome_zarr_container.get_image(path=level).channel_labels
         if measure_intensity_features.channels_to_include is not None:
             channel_labels_to_include = [
@@ -294,7 +299,7 @@ def measure_features(
                 tables_roi_list.append(label_roi_table)
 
         # TODO: implement z_decay_correction
-        if measure_intensity_features is not None:
+        if measure_intensity_features.measure:
             if channel_labels:
                 channel_roi_table_list = []
                 for channel_label in channel_labels:
