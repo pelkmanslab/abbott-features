@@ -98,8 +98,11 @@ def cellvoyager_time_decay(
     """
     logging.info("Starting cellvoyager_time_decay_init task")
 
-    ome_zarr_plate = open_ome_zarr_plate(zarr_dir)
-    tables_dir = Path(zarr_dir) / "tables"
+    zarr_fld = Path(zarr_urls[0]).parent.parent.parent.as_posix()
+    logging.info(f"Zarr folder: {zarr_fld}")
+
+    ome_zarr_plate = open_ome_zarr_plate(zarr_fld)
+    tables_dir = Path(zarr_fld) / "tables"
     os.makedirs(tables_dir, exist_ok=True)
 
     logging.info("Start parsing metadata for acquisition timestamps")
@@ -161,7 +164,7 @@ def cellvoyager_time_decay(
             overwrite=overwrite,
         )
 
-        logging.info(f"Saved timepoints table to {zarr_dir=}")
+        logging.info(f"Saved timepoints table to {zarr_fld=}")
 
     logging.info(
         "Finished calculating acquisition times, starting to "

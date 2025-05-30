@@ -98,13 +98,16 @@ def z_decay(
     """
     logging.info("Starting z_decay task")
 
-    out_fld_models = Path(zarr_dir) / "models"
+    zarr_fld = Path(zarr_urls[0]).parent.parent.parent.as_posix()
+    logging.info(f"Zarr folder: {zarr_fld}")
+
+    out_fld_models = Path(zarr_fld) / "models"
     logging.info(f"Saving models to: {out_fld_models}")
     out_fld_plots = out_fld_models / "__plots/z_decay"
     logging.info(f"Saving plots to: {out_fld_plots}")
     out_fld_plots.mkdir(parents=True, exist_ok=True)
 
-    ome_zarr_plate = open_ome_zarr_plate(zarr_dir)
+    ome_zarr_plate = open_ome_zarr_plate(zarr_fld)
 
     # Load the uncorrected feature table
     df_features_pd = ome_zarr_plate.concatenate_image_tables(
