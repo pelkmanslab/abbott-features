@@ -709,7 +709,7 @@ class NeighborhoodQueryObject:
         pixel_sizes = label_image.pixel_size.as_dict()
         scale = label_image.pixel_size.zyx
 
-        label_numpy = label_image.get_roi(roi).astype("uint16")
+        label_numpy = label_image.get_roi(roi.name).astype("uint16")
         lbl = si.to_spatial_image(
             label_numpy,
             dims=axes_names,
