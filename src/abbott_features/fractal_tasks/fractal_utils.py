@@ -37,6 +37,10 @@ def get_zarrurl_from_image_label(well_url: Path, channel_label: str, level: str 
         if channel_label in channel_labels:
             return zarr_url
 
+    raise ValueError(
+        f"Channel label '{channel_label}' does not exist in well '{well_url}'."
+    )
+
 
 def get_well_from_zarrurl(zarr_url: str):
     """Get the well from a zarr_url.

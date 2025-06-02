@@ -142,11 +142,13 @@ def measure_features(
     zarr_plate = Path(zarr_url).parent.parent.parent
     logging.info(f"{zarr_plate=}")
 
+    well_url = Path(zarr_url).parent
+    logging.info(f"{well_url=}")
+
     # Get ref_zarr_url of reference acquisition
     # where the label image and table is stored if provided
     # otherwise assumes each acquisition has its own label image and table
     if reference_acquisition is not None:
-        well_url = Path(zarr_url).parent
         ref_zarr_url = (well_url / str(reference_acquisition)).as_posix()
     else:
         ref_zarr_url = zarr_url
@@ -298,7 +300,6 @@ def measure_features(
                 )
                 tables_roi_list.append(label_roi_table)
 
-        # TODO: implement z_decay_correction
         if measure_intensity_features.measure:
             if channel_labels:
                 channel_roi_table_list = []
@@ -336,7 +337,6 @@ def measure_features(
                 )
                 tables_roi_list.append(distance_roi_table)
 
-        # TODO: implement z_decay_correction and t_decay_correction
         if measure_colocalization_features is not None:
             if zarr_url == ref_zarr_url:
                 logging.info(
