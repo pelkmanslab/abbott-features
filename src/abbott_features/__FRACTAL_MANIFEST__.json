@@ -87,6 +87,11 @@
           "IntensityFeaturesInputModel": {
             "description": "Get intensity features to measure.",
             "properties": {
+              "measure": {
+                "default": false,
+                "title": "Measure",
+                "type": "boolean"
+              },
               "channels_to_include": {
                 "items": {
                   "$ref": "#/$defs/ChannelInputModel"
@@ -186,6 +191,11 @@
                 "$ref": "#/$defs/IntensityFeaturesInputModel"
               }
             ],
+            "default": {
+              "measure": false,
+              "channels_to_include": null,
+              "channels_to_exclude": null
+            },
             "title": "Measure Intensity Features",
             "description": "From which channels intensity features should be measured. If not provided, the task will not measure any intensity features."
           },

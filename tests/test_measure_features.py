@@ -39,12 +39,7 @@ def test_decays(test_data_dir):
 
     # First measure features
     measure_intensity_features = IntensityFeaturesInputModel(
-        channels_to_include=[
-            ChannelInputModel(label="DAPI_2"),
-            ChannelInputModel(label="ECadherin_2"),
-            ChannelInputModel(label="DAPI_3"),
-            ChannelInputModel(label="pSmad15_3"),
-        ]
+        measure=True,
     )
     measure_colocalization_features = ColocalizationFeaturesInputModel(
         channel_pair=[
@@ -105,10 +100,11 @@ def test_decays(test_data_dir):
 
     # Measure features with z&t decay correction
     measure_intensity_features = IntensityFeaturesInputModel(
+        measure=True,
         channels_to_include=[
             ChannelInputModel(label="DAPI_2"),
             ChannelInputModel(label="pSmad15_3"),
-        ]
+        ],
     )
     measure_colocalization_features = ColocalizationFeaturesInputModel(
         channel_pair=[
@@ -148,10 +144,11 @@ def test_measure_features(test_data_dir):
     zarr_urls = [f"{test_data_dir}/B/03/0", f"{test_data_dir}/B/03/1"]
 
     measure_intensity_features = IntensityFeaturesInputModel(
+        measure=True,
         channels_to_include=[
             ChannelInputModel(label="DAPI_2"),
             ChannelInputModel(label="pSmad15_3"),
-        ]
+        ],
     )
     measure_distance_features = DistanceFeaturesInputModel(label_name_to="emb_linked")
     measure_colocalization_features = ColocalizationFeaturesInputModel(
@@ -186,9 +183,10 @@ def test_measure_features(test_data_dir):
 
     # Test exclude channels for intensity features
     measure_intensity_features = IntensityFeaturesInputModel(
+        measure=True,
         channels_to_exclude=[
             ChannelInputModel(label="DAPI_2"),
-        ]
+        ],
     )
 
     measure_features(
@@ -211,6 +209,10 @@ def test_measure_features(test_data_dir):
     with pytest.raises(ValidationError):
         NeighborhoodFeaturesInputModel(measure=False, label_img_mask="emb_linked")
 
+    measure_intensity_features = IntensityFeaturesInputModel(
+        measure=False,
+    )
+
     # Test overwrite set to False
     with pytest.raises(NgioValueError):
         measure_features(
@@ -222,6 +224,7 @@ def test_measure_features(test_data_dir):
             masking_label_name="emb_linked",
             ROI_table_name="emb_ROI_table_2_linked",
             measure_label_features=True,
+            measure_intensity_features=measure_intensity_features,
             overwrite=False,
         )
 

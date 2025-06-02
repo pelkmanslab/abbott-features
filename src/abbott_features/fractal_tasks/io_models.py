@@ -68,21 +68,9 @@ class IntensityFeaturesInputModel(BaseModel):
         channels_to_exclude: Channels to exclude from the measurement.
     """
 
+    measure: bool = False
     channels_to_include: list[ChannelInputModel] = None
     channels_to_exclude: list[ChannelInputModel] = None
-
-    @model_validator(mode="after")
-    def mutually_exclusive_channel_attributes(self: Self) -> Self:
-        """Check that either `channels_to_include` or `channels_to_exclude` is set."""
-        channels_to_include = self.channels_to_include
-        channels_to_exclude = self.channels_to_exclude
-
-        if channels_to_include and channels_to_exclude:
-            raise ValueError(
-                "`channels_to_include` and `channels_to_exclude` cannot be both set "
-                f"(given {channels_to_include=} and {channels_to_exclude=})."
-            )
-        return self
 
 
 class DistanceFeaturesInputModel(BaseModel):
