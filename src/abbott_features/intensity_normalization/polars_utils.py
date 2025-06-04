@@ -244,7 +244,12 @@ def stack_correlation_metric_by_acquisition(
 
 
 def plot_channel_t_decay_models(
-    df_mean_per_embryo, output_dir, y_name="Mean_CycleMeanNorm", loss="linear", n_cols=4
+    df_mean_per_embryo,
+    output_dir,
+    time_decay_table_name="time_decay_table_name",
+    y_name="Mean_CycleMeanNorm",
+    loss="linear",
+    n_cols=4,
 ):
     """Plot intensity decay models for all channels.
 
@@ -254,6 +259,7 @@ def plot_channel_t_decay_models(
         DataFrame containing channel intensity data
     output_dir : str
         Directory to save the output figure
+    time_decay_table_name : Name of the output plot.
     y_name : str
         Column name for intensity values
     loss : str
@@ -345,7 +351,9 @@ def plot_channel_t_decay_models(
     # Save figure
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
-    plt.savefig(f"{output_dir}/time_decay_models.png", dpi=300, bbox_inches="tight")
+    plt.savefig(
+        f"{output_dir}/{time_decay_table_name}.png", dpi=300, bbox_inches="tight"
+    )
 
     return models, fig
 
