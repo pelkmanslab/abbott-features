@@ -22,7 +22,8 @@ if TYPE_CHECKING:
 
 LABEL_PATTERN = r"^{}((.lower)|(.upper)|(Direction)|(Vertices)|(Size)|(Origin))?(\W[abc])?(\W[xyz])?$"  # noqa: E501
 
-CHANNEL_PATTERN = r"([a-zA-Z0-9-]+)[_](\d+)"
+# CHANNEL_PATTERN = r"([a-zA-Z0-9-]+)[_](\d+)"
+CHANNEL_PATTERN = r"[a-zA-Z0-9-]+(?:_\d+)?"
 INTENSITY_PATTERN = rf"^({CHANNEL_PATTERN}_)?{'{}'}(\W[abc])?(\W[xyz])?$"
 
 CHANNEL_PAIR_PATTERN = rf"{CHANNEL_PATTERN}\W{CHANNEL_PATTERN}"
