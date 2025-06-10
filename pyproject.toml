@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61", "setuptools-scm", "numpy>=1.17", "cython>=0.18", "wheel"]
+requires = ["setuptools>=61", "setuptools-scm", "numpy>=1.17,<2", "cython>=0.18", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -26,7 +26,8 @@ authors = [
 
 # Required Python version and dependencies
 requires-python = ">=3.11"
-dependencies = ["ngio @ git+https://github.com/rhornb/ngio.git@dev", 
+dependencies = ["ngio @ git+https://github.com/rhornb/ngio.git@dev",
+                "numpy<2",
                 "polars",
                 "scipy",
                 "scikit-learn",
