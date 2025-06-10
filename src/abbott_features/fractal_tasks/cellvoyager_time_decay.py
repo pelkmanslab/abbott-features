@@ -255,7 +255,8 @@ def cellvoyager_time_decay(
 
     os.makedirs(output_plots_dir, exist_ok=True)
     plt.savefig(
-        Path(output_plots_dir) / "equivalent_spherical_radius_cutoff.png",
+        Path(output_plots_dir)
+        / f"{feature_table_name}_equivalent_spherical_radius_cutoff.png",
         dpi=300,
     )
     plt.close()
@@ -332,9 +333,10 @@ def cellvoyager_time_decay(
     )
 
     # Fit models to data
-    models, fig = plot_channel_t_decay_models(
+    models, _ = plot_channel_t_decay_models(
         df_mean_per_embryo,
         output_dir=output_plots_dir,
+        time_decay_table_name=time_decay_table_name,
     )
 
     # Store correction factors for each model and channel in a table
