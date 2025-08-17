@@ -3,6 +3,9 @@
 from typing import TypeAlias, Union
 
 import ngio
+import ngio.common
+import ngio.images
+import ngio.images._masked_image
 import polars as pl
 import spatial_image as si
 
@@ -17,10 +20,10 @@ IntensityFeaturesLike: TypeAlias = tuple[IntensityFeature, ...] | tuple[str, ...
 
 
 def get_intensity_features(
-    label_image: Union[ngio.images.label.Label, ngio.images.masked_image.MaskedLabel],
-    images: ngio.images.image.Image,
+    label_image: Union[ngio.images.Label, ngio.images._masked_image.MaskedLabel],
+    images: ngio.images.Image,
     channel_label: str,
-    roi: ngio.common._roi.Roi,
+    roi: ngio.common.Roi,
     kwargs_decay_corr: dict,
     features: IntensityFeaturesLike = tuple(IntensityFeature),
 ) -> pl.DataFrame:
@@ -28,7 +31,7 @@ def get_intensity_features(
     axes_names = label_image.axes_mapper.on_disk_axes_names
     pixel_sizes = label_image.pixel_size.as_dict()
 
-    if isinstance(label_image, ngio.images.masked_image.MaskedLabel):
+    if isinstance(label_image, ngio.images._masked_image.MaskedLabel):
         label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
     else:
         label_numpy = label_image.get_roi(roi).astype("uint16")

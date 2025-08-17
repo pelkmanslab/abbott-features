@@ -161,9 +161,7 @@ def measure_features(
 
     # Get ROI table to loop over and check if it is a masking ROI table if use_masks
     if use_masks:
-        roi_table = ome_zarr_container_ref.get_table(
-            ROI_table_name, check_type="masking_roi_table"
-        )
+        roi_table = ome_zarr_container_ref.get_masking_roi_table(ROI_table_name)
 
     else:
         roi_table = ome_zarr_container_ref.get_table(ROI_table_name)

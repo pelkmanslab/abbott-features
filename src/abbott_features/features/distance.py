@@ -5,6 +5,10 @@ from typing import NamedTuple, Union
 
 import itk
 import ngio
+import ngio.common
+import ngio.hcs
+import ngio.images
+import ngio.images._masked_image
 import polars as pl
 import spatial_image as si
 
@@ -24,7 +28,7 @@ from abbott_features.features.types import (
 
 
 def _distance_to_border(
-    mask: BinaryImage, label_image_to: ngio.images.label.Label
+    mask: BinaryImage, label_image_to: ngio.images.Label
 ) -> DistanceTransform:
     lbl_dim = "l"
     dt = itk.signed_maurer_distance_map_image_filter(mask, inside_is_positive=True)
@@ -34,7 +38,7 @@ def _distance_to_border(
 
 
 def _distance_along_axis(
-    mask: BinaryImage, label_image_to: ngio.images.label.Label, axis: str = "z"
+    mask: BinaryImage, label_image_to: ngio.images.Label, axis: str = "z"
 ) -> DistanceTransform:
     pixel_size = label_image_to.pixel_size.as_dict()[axis]
     sum_along_axis: SpatialImage = mask.cumsum(axis) * pixel_size
@@ -64,11 +68,9 @@ class LabelObject(NamedTuple):
 
 
 def get_distance_features(
-    label_image: Union[ngio.images.label.Label, ngio.images.masked_image.MaskedLabel],
-    label_image_to: Union[
-        ngio.images.label.Label, ngio.images.masked_image.MaskedLabel
-    ],
-    roi: ngio.common._roi.Roi,
+    label_image: Union[ngio.images.Label, ngio.images._masked_image.MaskedLabel],
+    label_image_to: Union[ngio.images.Label, ngio.images._masked_image.MaskedLabel],
+    roi: ngio.common.Roi,
     distance_transforms: tuple[DistanceFunction, ...] = tuple(DefaultDistanceFunction),
     features: tuple[DistanceFeature, ...] = tuple(DefaultDistanceFeature),
     named_features: bool = True,
@@ -84,7 +86,7 @@ def get_distance_features(
     scale = label_image.pixel_size.as_dict()
 
     # Convert the label images to spatial_images
-    if isinstance(label_image, ngio.images.masked_image.MaskedLabel):
+    if isinstance(label_image, ngio.images._masked_image.MaskedLabel):
         label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
     else:
         label_numpy = label_image.get_roi(roi).astype("uint16")
@@ -95,7 +97,7 @@ def get_distance_features(
         scale=scale,
         name=label_image.meta.name,
     )
-    if isinstance(label_image_to, ngio.images.masked_image.MaskedLabel):
+    if isinstance(label_image_to, ngio.images._masked_image.MaskedLabel):
         label_numpy_to = label_image_to.get_roi_masked(int(roi.name)).astype("uint16")
     else:
         label_numpy_to = label_image_to.get_roi(roi).astype("uint16")

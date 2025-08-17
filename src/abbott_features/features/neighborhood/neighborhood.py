@@ -13,9 +13,9 @@ default_params = DensityParams()
 
 
 def get_neighborhood_features(
-    label_image: ngio.images.label.Label,
-    label_img_mask: ngio.images.label.Label,
-    roi: ngio.common._roi.Roi,
+    label_image: ngio.images.Label,
+    label_img_mask: ngio.images.Label,
+    roi: ngio.common.Roi,
     radius: tuple[float, ...] = default_params.radius,
     knn_distance: tuple[int, ...] = default_params.knn_distance,
     distance_to_closest_neighbor: bool = default_params.distance_to_closest_neighbor,

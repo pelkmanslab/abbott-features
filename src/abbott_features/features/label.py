@@ -18,15 +18,15 @@ LabelFeatureLike: TypeAlias = tuple[LabelFeature, ...] | tuple[str, ...]
 
 
 def get_label_features(
-    label_image: Union[ngio.images.label.Label, ngio.images.masked_image.MaskedLabel],
-    roi: ngio.common._roi.Roi,
+    label_image: Union[ngio.images.Label, ngio.images._masked_image.MaskedLabel],
+    roi: ngio.common.Roi,
     features: LabelFeatureLike = tuple(DefaultLabelFeature),
 ) -> pl.DataFrame:
     """Get label features from a label image."""
     axes_names = label_image.axes_mapper.on_disk_axes_names
     pixel_sizes = label_image.pixel_size.as_dict()
 
-    if isinstance(label_image, ngio.images.masked_image.MaskedLabel):
+    if isinstance(label_image, ngio.images._masked_image.MaskedLabel):
         label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
     else:
         label_numpy = label_image.get_roi(roi).astype("uint16")

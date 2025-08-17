@@ -3,6 +3,9 @@
 from typing import Union
 
 import ngio
+import ngio.common
+import ngio.images
+import ngio.images._masked_image
 import numpy as np
 import polars as pl
 from skimage.measure import regionprops
@@ -15,15 +18,15 @@ def parent_label(lbl: np.array, lbl2: np.array):
 
 
 def get_parent_objects(
-    label_image: Union[ngio.images.label.Label, ngio.images.masked_image.MaskedLabel],
+    label_image: Union[ngio.images.Label, ngio.images._masked_image.MaskedLabel],
     parent_label_images: list[
-        Union[ngio.images.label.Label, ngio.images.masked_image.MaskedLabel]
+        Union[ngio.images.Label, ngio.images._masked_image.MaskedLabel]
     ],
-    roi: ngio.common._roi.Roi,
+    roi: ngio.common.Roi,
     index_column: str = "label",
     parent_prefix: str | None = "parent",
 ) -> pl.DataFrame:
-    if isinstance(label_image, ngio.images.masked_image.MaskedLabel):
+    if isinstance(label_image, ngio.images._masked_image.MaskedLabel):
         label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
     else:
         label_numpy = label_image.get_roi(roi).astype("uint16")
@@ -32,7 +35,7 @@ def get_parent_objects(
     props = regionprops(label_numpy)
     labels = [prop.label for prop in props]
     for lbl_other in parent_label_images:
-        if isinstance(lbl_other, ngio.images.masked_image.MaskedLabel):
+        if isinstance(lbl_other, ngio.images._masked_image.MaskedLabel):
             lbl_other_numpy = lbl_other.get_roi_masked(int(roi.name)).astype("uint16")
         else:
             lbl_other_numpy = lbl_other.get_roi(roi).astype("uint16")

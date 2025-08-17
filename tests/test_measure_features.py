@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from devtools import debug
-from ngio.tables.tables_container import open_table
+from ngio import open_ome_zarr_container
 from ngio.utils._errors import NgioValueError
 from pydantic import ValidationError
 
@@ -201,9 +201,9 @@ def test_measure_features(test_data_dir):
         measure_intensity_features=measure_intensity_features,
         overwrite=True,
     )
-    store = Path(zarr_urls[0]) / "tables/nuclei"
-    table_loaded = open_table(store=store)
-    assert table_loaded.dataframe.shape == (5460, 17)
+    ome_zarr_container = open_ome_zarr_container(zarr_urls[0])
+    table_features = ome_zarr_container.get_feature_table("nuclei")
+    assert table_features.dataframe.shape == (5460, 17)
 
     # Test validation of measure_neighborhood_features if measure is False
     with pytest.raises(ValidationError):

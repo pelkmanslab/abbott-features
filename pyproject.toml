@@ -26,7 +26,7 @@ authors = [
 
 # Required Python version and dependencies
 requires-python = ">=3.11"
-dependencies = ["ngio @ git+https://github.com/rhornb/ngio.git@dev",
+dependencies = ["ngio>=0.3,<0.4",
                 "numpy<2",
                 "polars",
                 "scipy",
