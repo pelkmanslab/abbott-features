@@ -34,10 +34,12 @@ dependencies = ["ngio>=0.3,<0.4",
                 "scikit-image",
                 "spatial-image",
                 "seaborn",
-                "itk", 
+                "itk<5.4.4", 
                 "strenum",
                 "numba",
                 "networkx[default]",
+                "pyarrow ==20.0.0",
+                "contourpy<1.3.3",
                 "fractal-tasks-core",
                 "fractal-task-tools",]
 

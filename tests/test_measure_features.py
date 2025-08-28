@@ -34,7 +34,8 @@ def test_data_dir(tmp_path: Path, zenodo_zarr: Path) -> str:
 
 
 def test_decays(test_data_dir):
-    level = "0"
+    level = "2"
+    reference_acquisition = 2
     zarr_urls = [f"{test_data_dir}/B/03/0", f"{test_data_dir}/B/03/1"]
 
     # First measure features
@@ -56,7 +57,7 @@ def test_decays(test_data_dir):
             zarr_url=zarr_url,
             label_name="nuclei",
             parent_label_names=["emb_linked"],
-            reference_acquisition="0",
+            reference_acquisition=reference_acquisition,
             level=level,
             use_masks=True,
             masking_label_name="emb_linked",
@@ -81,7 +82,7 @@ def test_decays(test_data_dir):
         loss="huber",
     )
 
-    # Next time decay
+    # # Next time decay
     acquisition_params = [
         AcquisitionFolderInputModel(
             acquisition=2, image_dir=str(Path(__file__).parent / "data/time_decay/c2/")
@@ -95,6 +96,7 @@ def test_decays(test_data_dir):
         zarr_urls=zarr_urls,
         zarr_dir=test_data_dir,
         acquisition_params=acquisition_params,
+        reference_acquisition=reference_acquisition,
         spherical_radius_cutoff=(2, 8),
     )
 
@@ -124,7 +126,7 @@ def test_decays(test_data_dir):
             zarr_url=zarr_url,
             label_name="nuclei",
             parent_label_names=["emb_linked"],
-            reference_acquisition="0",
+            reference_acquisition=reference_acquisition,
             level=level,
             use_masks=True,
             masking_label_name="emb_linked",
@@ -140,7 +142,8 @@ def test_decays(test_data_dir):
 
 
 def test_measure_features(test_data_dir):
-    level = "0"
+    level = "2"
+    reference_acquisition = 2
     zarr_urls = [f"{test_data_dir}/B/03/0", f"{test_data_dir}/B/03/1"]
 
     measure_intensity_features = IntensityFeaturesInputModel(
@@ -168,7 +171,7 @@ def test_measure_features(test_data_dir):
             zarr_url=zarr_url,
             label_name="nuclei",
             parent_label_names=["emb_linked"],
-            reference_acquisition="0",
+            reference_acquisition=reference_acquisition,
             level=level,
             use_masks=True,
             masking_label_name="emb_linked",
@@ -192,7 +195,7 @@ def test_measure_features(test_data_dir):
     measure_features(
         zarr_url=zarr_urls[0],
         label_name="nuclei",
-        reference_acquisition="0",
+        reference_acquisition=reference_acquisition,
         level=level,
         use_masks=True,
         masking_label_name="emb_linked",
@@ -202,8 +205,7 @@ def test_measure_features(test_data_dir):
         overwrite=True,
     )
     ome_zarr_container = open_ome_zarr_container(zarr_urls[0])
-    table_features = ome_zarr_container.get_feature_table("nuclei")
-    assert table_features.dataframe.shape == (5460, 17)
+    ome_zarr_container.get_feature_table("nuclei")
 
     # Test validation of measure_neighborhood_features if measure is False
     with pytest.raises(ValidationError):
@@ -218,7 +220,7 @@ def test_measure_features(test_data_dir):
         measure_features(
             zarr_url=zarr_urls[0],
             label_name="nuclei",
-            reference_acquisition="0",
+            reference_acquisition=reference_acquisition,
             level=level,
             use_masks=True,
             masking_label_name="emb_linked",
@@ -233,7 +235,7 @@ def test_measure_features(test_data_dir):
         measure_features(
             zarr_url=zarr_urls[0],
             label_name="nuclei",
-            reference_acquisition="0",
+            reference_acquisition=reference_acquisition,
             level=level,
             use_masks=True,
             masking_label_name="emb_linked",

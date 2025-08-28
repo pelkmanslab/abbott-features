@@ -17,7 +17,7 @@ from typing import Optional
 
 import numpy as np
 import polars as pl
-from ngio import open_ome_zarr_container, open_ome_zarr_plate
+from ngio import open_ome_zarr_container, open_ome_zarr_plate, open_ome_zarr_well
 from ngio.tables.v1 import FeatureTableV1
 from ngio.utils._errors import NgioValueError
 from pydantic import validate_call
@@ -140,16 +140,31 @@ def measure_features(
     logging.info(f"{zarr_url=}")
 
     zarr_plate = Path(zarr_url).parent.parent.parent
+    ome_zarr_plate = open_ome_zarr_plate(zarr_plate)
     logging.info(f"{zarr_plate=}")
 
     well_url = Path(zarr_url).parent
+    ome_zarr_well = open_ome_zarr_well(well_url)
     logging.info(f"{well_url=}")
 
     # Get ref_zarr_url of reference acquisition
     # where the label image and table is stored if provided
     # otherwise assumes each acquisition has its own label image and table
     if reference_acquisition is not None:
-        ref_zarr_url = (well_url / str(reference_acquisition)).as_posix()
+        ref_zarr_path = ome_zarr_well.paths(reference_acquisition)[0]
+        if len(ref_zarr_path) > 1:
+            raise ValueError(
+                f"More than one path found for acquisition "
+                f"{reference_acquisition=} in {well_url=}. "
+            )
+        elif len(ref_zarr_path) == 0:
+            raise ValueError(
+                f"No path found for acquisition "
+                f"{reference_acquisition=} in {well_url=}. "
+            )
+        else:
+            ref_zarr_path = ref_zarr_path[0]
+            ref_zarr_url = (well_url / ref_zarr_path).as_posix()
     else:
         ref_zarr_url = zarr_url
 
@@ -213,7 +228,6 @@ def measure_features(
             ]
 
     # Initialize z-decay_correction and t-decay_correction if provided
-    ome_zarr_plate = open_ome_zarr_plate(zarr_plate)
     well = get_well_from_zarrurl(zarr_url)
 
     # Load time-decay correction dataframe if provided
