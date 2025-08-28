@@ -340,7 +340,7 @@
           "reference_acquisition": {
             "title": "Reference Acquisition",
             "type": "integer",
-            "description": "Missing description"
+            "description": "The reference acquisition to be used for removing mitotic cells etc."
           },
           "acquisition_params": {
             "items": {
