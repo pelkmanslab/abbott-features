@@ -195,15 +195,18 @@ def measure_features(
     # Check if the max label value exceeds uint16 range
     # Need to convert to uint16 as itk.LabelImageToShapeLabelMapFilter
     # does not support uint32
-    label_img_numpy = label_img.get_array(mode="numpy")
-    max_label_value = np.max(label_img_numpy)
+    label_da = label_img.get_array(mode="dask")
+    uint16_max = int(np.iinfo(np.uint16).max)
 
-    if max_label_value > 65535:  # uint16 max value
-        raise ValueError(
-            f"Label image contains values ({max_label_value}) that exceed the "
-            f" maximum allowed value (65535) for processing with "
-            "itk.LabelImageToShapeLabelMapFilter. "
-        )
+    # If dtype already fits in uint16, skip any computation
+    if not label_da.dtype == np.uint16 or not label_da.dtype == np.uint8:
+        max_label_value = int(label_da.max().compute())
+        if max_label_value > uint16_max:
+            raise ValueError(
+                f"Label image contains values ({max_label_value}) that exceed the "
+                f"maximum allowed value ({uint16_max}) for processing with "
+                "itk.LabelImageToShapeLabelMapFilter."
+            )
 
     # Get the images
     images = ome_zarr_container.get_image(path=level)
