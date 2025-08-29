@@ -483,7 +483,7 @@ def query_knn_adjacency(
 ) -> CSRArray:
     n_objects = neighbors._fit_X.shape[0]
     if k > (n_objects - 1):
-        logger.warn(
+        logger.warning(
             f"k={k} > (n_objects-1)={(n_objects-1)}; setting k to {n_objects-1}"
         )
         k = n_objects - 1
@@ -578,7 +578,7 @@ def query_knn_kernel(
     row_normalized: bool = True,
 ) -> CSRArray:
     """i. e. adaptive bandwidth"""
-    n_dist, n_idx = neighbors.kneighbors(n_neighbors=k)
+    n_dist, _ = neighbors.kneighbors(n_neighbors=k)
     bandwidth = n_dist[:, -1]
     distance_matrix = next(
         query_knn_distance(neighbors=neighbors, k=k, self_loops=self_loops)
@@ -698,11 +698,9 @@ class NeighborhoodQueryObject:
     @classmethod
     def from_labelimage(
         cls,
-        label_image: ngio.images.label.Label | dict[str, ngio.images.label.Label],
-        label_image_to: ngio.images.label.Label
-        | dict[str, ngio.images.label.Label]
-        | None = None,
-        roi: ngio.common._roi.Roi | None = None,
+        label_image: ngio.images.Label | dict[str, ngio.images.Label],
+        label_image_to: ngio.images.Label | dict[str, ngio.images.Label] | None = None,
+        roi: ngio.common.Roi | None = None,
         mask_n_samples: int = 100,
     ) -> "NeighborhoodQueryObject":
         axes_names = label_image.axes_mapper.on_disk_axes_names
@@ -957,7 +955,7 @@ class NeighborhoodQueryObject:
                                         zip(
                                             *self.label.select(
                                                 pl.struct(pl.all())
-                                            ).with_row_count()
+                                            ).with_row_index()
                                         )
                                     )
                                 )

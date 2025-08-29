@@ -2,9 +2,11 @@
 
 from typing import TypeAlias, Union
 
-import ngio
 import polars as pl
 import spatial_image as si
+from ngio.common import Roi
+from ngio.images import Image, Label
+from ngio.images._masked_image import MaskedLabel
 
 from abbott_features.features._base import get_si_features_df
 from abbott_features.features.constants import IntensityFeature
@@ -17,10 +19,10 @@ IntensityFeaturesLike: TypeAlias = tuple[IntensityFeature, ...] | tuple[str, ...
 
 
 def get_intensity_features(
-    label_image: Union[ngio.images.label.Label, ngio.images.masked_image.MaskedLabel],
-    images: ngio.images.image.Image,
+    label_image: Union[Label, MaskedLabel],
+    images: Image,
     channel_label: str,
-    roi: ngio.common._roi.Roi,
+    roi: Roi,
     kwargs_decay_corr: dict,
     features: IntensityFeaturesLike = tuple(IntensityFeature),
 ) -> pl.DataFrame:
@@ -28,7 +30,7 @@ def get_intensity_features(
     axes_names = label_image.axes_mapper.on_disk_axes_names
     pixel_sizes = label_image.pixel_size.as_dict()
 
-    if isinstance(label_image, ngio.images.masked_image.MaskedLabel):
+    if isinstance(label_image, MaskedLabel):
         label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
     else:
         label_numpy = label_image.get_roi(roi).astype("uint16")

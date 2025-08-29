@@ -1,10 +1,10 @@
 # Do not edit - changes here will be overwritten by Copier
-_commit: v0.5.0
+_commit: v0.5.1
 _src_path: gh:fractal-analytics-platform/fractal-tasks-template
 author_email: ruth.hornbachner@uzh.ch
 author_name: Ruth Hornbachner
 package_name: abbott_features
 project_name: abbott-features
 project_short_description: Package description.
-project_url: ''
+project_url: https://github.com/pelkmanslab/abbott-features
 

@@ -26,7 +26,7 @@ authors = [
 
 # Required Python version and dependencies
 requires-python = ">=3.11"
-dependencies = ["ngio @ git+https://github.com/rhornb/ngio.git@dev",
+dependencies = ["ngio==0.3.5",
                 "numpy<2",
                 "polars",
                 "scipy",
@@ -34,12 +34,15 @@ dependencies = ["ngio @ git+https://github.com/rhornb/ngio.git@dev",
                 "scikit-image",
                 "spatial-image",
                 "seaborn",
-                "itk", 
+                "itk<5.4.4", 
                 "strenum",
                 "numba",
                 "networkx[default]",
+                "pyarrow==20.0.0",
+                "contourpy<1.3.3",
                 "fractal-tasks-core",
-                "fractal-task-tools",]
+                "fractal-task-tools",
+                ]
 
 # Optional dependencies (e.g. for `pip install -e ".[dev]"`, see
 # https://peps.python.org/pep-0621/#dependencies-optional-dependencies)

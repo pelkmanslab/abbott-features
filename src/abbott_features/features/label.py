@@ -2,9 +2,11 @@
 
 from typing import TypeAlias, Union
 
-import ngio
 import polars as pl
 import spatial_image as si
+from ngio.common import Roi
+from ngio.images import Label
+from ngio.images._masked_image import MaskedLabel
 
 from abbott_features.features._base import get_si_features_df
 from abbott_features.features.constants import (
@@ -18,15 +20,15 @@ LabelFeatureLike: TypeAlias = tuple[LabelFeature, ...] | tuple[str, ...]
 
 
 def get_label_features(
-    label_image: Union[ngio.images.label.Label, ngio.images.masked_image.MaskedLabel],
-    roi: ngio.common._roi.Roi,
+    label_image: Union[Label, MaskedLabel],
+    roi: Roi,
     features: LabelFeatureLike = tuple(DefaultLabelFeature),
 ) -> pl.DataFrame:
     """Get label features from a label image."""
     axes_names = label_image.axes_mapper.on_disk_axes_names
     pixel_sizes = label_image.pixel_size.as_dict()
 
-    if isinstance(label_image, ngio.images.masked_image.MaskedLabel):
+    if isinstance(label_image, MaskedLabel):
         label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
     else:
         label_numpy = label_image.get_roi(roi).astype("uint16")
@@ -46,12 +48,12 @@ def get_label_features(
     return feature_table
 
 
-def get_centroids(label_image: LabelImage) -> "pl.DataFrame":
+def get_centroids(label_image: LabelImage) -> pl.DataFrame:
     """Get centroids of label objects."""
     return get_si_features_df(label_image, props=("Centroid",), named_features=True)
 
 
-def get_position_and_orientation_features(label_image: LabelImage) -> "pl.DataFrame":
+def get_position_and_orientation_features(label_image: LabelImage) -> pl.DataFrame:
     """Get position and orientation features of label objects."""
     return get_si_features_df(
         label_image,
