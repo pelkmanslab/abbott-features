@@ -277,7 +277,7 @@ def plot_channel_t_decay_models(
 
     # Extract and sort channels by their numeric index
     channels = next(iter(df_mean_per_embryo.select(pl.col("channel")).unique()))
-    channels = sorted(channels, key=lambda x: int(x.rsplit("_", 1)[1]))
+    # channels = sorted(channels, key=lambda x: int(x.rsplit("_", 1)[1]))
 
     # Create subplot grid
     n_rows = math.ceil(len(channels) / n_cols)

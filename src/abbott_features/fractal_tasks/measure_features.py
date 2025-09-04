@@ -139,6 +139,11 @@ def measure_features(
     logging.info("Starting measure_features task")
     logging.info(f"{zarr_url=}")
 
+    # Check if zarr_url ends on not just an integer
+    zarr_ending = None
+    if not Path(zarr_url).stem.isdigit():
+        zarr_ending = Path(zarr_url).stem.split("_")[-1]
+
     zarr_plate = Path(zarr_url).parent.parent.parent
     ome_zarr_plate = open_ome_zarr_plate(zarr_plate)
     logging.info(f"{zarr_plate=}")
@@ -151,20 +156,23 @@ def measure_features(
     # where the label image and table is stored if provided
     # otherwise assumes each acquisition has its own label image and table
     if reference_acquisition is not None:
-        ref_zarr_path = ome_zarr_well.paths(reference_acquisition)[0]
-        if len(ref_zarr_path) > 1:
-            raise ValueError(
-                f"More than one path found for acquisition "
-                f"{reference_acquisition=} in {well_url=}. "
-            )
-        elif len(ref_zarr_path) == 0:
+        ref_zarr_paths = ome_zarr_well.paths(reference_acquisition)
+        if len(ref_zarr_paths) == 0:
             raise ValueError(
                 f"No path found for acquisition "
                 f"{reference_acquisition=} in {well_url=}. "
             )
+        elif len(ref_zarr_paths) > 1:
+            if zarr_ending is not None:
+                ref_zarr_path = f"{reference_acquisition}_{zarr_ending}"
         else:
-            ref_zarr_path = ref_zarr_path[0]
-            ref_zarr_url = (well_url / ref_zarr_path).as_posix()
+            ref_zarr_path = ref_zarr_paths[0]  # TODO: Come up with better fix
+        if ref_zarr_path not in ref_zarr_paths:
+            raise ValueError(
+                f"Path '{ref_zarr_path}' not found for acquisition "
+                f"{reference_acquisition=} in {well_url=}. "
+            )
+        ref_zarr_url = (well_url / ref_zarr_path).as_posix()
     else:
         ref_zarr_url = zarr_url
 
@@ -215,7 +223,7 @@ def measure_features(
     # Get channels to include/exclude
     if measure_intensity_features.measure:
         # If no channels to include or exclude, use all channels
-        channel_labels = ome_zarr_container.get_image(path=level).channel_labels
+        channel_labels = images.channel_labels
         if measure_intensity_features.channels_to_include is not None:
             channel_labels_to_include = [
                 c.label for c in measure_intensity_features.channels_to_include

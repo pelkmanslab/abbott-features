@@ -23,7 +23,9 @@ import polars.selectors as cs
 import seaborn as sns
 from fractal_tasks_core.cellvoyager.metadata import parse_yokogawa_metadata
 from ngio import open_ome_zarr_plate
-from ngio.tables.v1 import GenericTable
+from ngio.common import concatenate_image_tables_as
+from ngio.hcs._plate import _build_extras
+from ngio.tables.v1 import FeatureTableV1, GenericTable
 from pydantic import validate_call
 
 from abbott_features.fractal_tasks.io_models import AcquisitionFolderInputModel
@@ -31,7 +33,6 @@ from abbott_features.intensity_normalization.polars_selector import sel
 from abbott_features.intensity_normalization.polars_utils import (
     get_correlation_by_acquisition_map,
     plot_channel_t_decay_models,
-    split_channel_column,
     stack_column_name_to_column,
     stack_correlation_metric_by_acquisition,
     to_tall,
@@ -101,17 +102,24 @@ def cellvoyager_time_decay(
     logging.info("Starting cellvoyager_time_decay_init task")
 
     zarr_fld = Path(zarr_urls[0]).parent.parent.parent.as_posix()
-    logging.info(f"Zarr plate folder: {zarr_fld}")
+    logging.info(f"Zarr folder: {zarr_fld}")
 
-    ome_zarr_plate = open_ome_zarr_plate(zarr_fld)
+    # Check if zarr_url ends on digit or e.g. _registered
+    zarr_ending = None
+    zarr_stem = Path(zarr_urls[0]).stem
+    if not zarr_stem[-1].isdigit():
+        zarr_ending = zarr_stem.split("_", 1)[1]
+
     tables_dir = Path(zarr_fld) / "tables"  # Directory to save plots and tables
-    os.makedirs(tables_dir, exist_ok=True)
+    output_plots_dir = Path(tables_dir) / "__plots"
+    os.makedirs(output_plots_dir, exist_ok=True)
+    logging.info(f"Saving plots to: {output_plots_dir}")
 
-    # 1. Retrieve per-cycle acquistion times from Yokogawa metadata files
+    # 1. Retrieve per-cycle acquisition times from Yokogawa metadata files
     logging.info("Start parsing metadata for acquisition timestamps")
     metadata_dfs = []
     for acquisition_param in acquisition_params:
-        acquisition = acquisition_param.acquisition
+        acq = acquisition_param.acquisition
         image_dir = Path(acquisition_param.image_dir)
 
         metadata, _ = parse_yokogawa_metadata(
@@ -119,12 +127,10 @@ def cellvoyager_time_decay(
             mlf_path=f"{image_dir}/{mlf_filename}",
         )
 
-        metadata["acquisition"] = acquisition
+        metadata["acquisition"] = acq
         metadata_dfs.append(metadata)
 
     df_pd = pd.concat(metadata_dfs)
-
-    logging.info("Finished parsing metadata for acquisition timestamps")
 
     # Convert to polars and rename columns
     df = pl.from_pandas(df_pd, include_index=True)
@@ -159,24 +165,34 @@ def cellvoyager_time_decay(
     # Save the timepoints table
     timepoints_table = GenericTable(df_timepoints)
 
+    ome_zarr_plate = open_ome_zarr_plate(zarr_fld)
     ome_zarr_plate.add_table(
         name="acquisition_times",
         table=timepoints_table,
         backend="experimental_parquet_v1",
         overwrite=overwrite,
     )
-    logging.info(f"Saved timepoints table to {zarr_fld=}")
-
     logging.info(
-        "Finished calculating acquisition times, starting to "
-        f"calculate time decay models on {feature_table_name} table."
+        "Finished parsing metadata for acquisition timestamps "
+        f"Saved timepoints table to {zarr_fld=}"
     )
 
     # 2. Load (time-uncorrected) feature table per acquisition
+    logging.info(
+        f"Starting to calculate time decay models on {feature_table_name} table."
+    )
+
     # Load reference acquisition features
-    df_features_pd_ref = ome_zarr_plate.concatenate_image_tables(
+    ref_images = ome_zarr_plate.get_images(reference_acquisition)
+    if zarr_ending is not None:
+        ref_images = {k: v for k, v in ref_images.items() if k.endswith(zarr_ending)}
+
+    # Workaround if more than one path to image per acquisition exists
+    df_features_pd_ref = concatenate_image_tables_as(
+        images=ref_images.values(),
+        extras=_build_extras(ref_images.keys()),
+        table_cls=FeatureTableV1,
         table_name=feature_table_name,
-        acquisition=reference_acquisition,
         index_key="index",
     )
 
@@ -185,6 +201,7 @@ def cellvoyager_time_decay(
         df_features_pd_ref.dataframe, include_index=True
     ).with_columns(
         pl.lit(label_name).alias("object"),
+        pl.lit(reference_acquisition).alias("acquisition").cast(pl.UInt16),
         (
             pl.concat_str(
                 [
@@ -205,20 +222,37 @@ def cellvoyager_time_decay(
         ),
         pl.col("ROI").cast(pl.Int16),
     )
-    ref_acq_path = int(
+
+    # Reference acquisition and path in well might not always match
+    ref_acq_path_in_well = (
         df_features_ref.select("path_in_well").unique().to_series().to_list()[0]
     )
+    if zarr_ending is not None:
+        ref_acq_path, _ = ref_acq_path_in_well.split("_")
+        ref_acq_path = int(ref_acq_path)
+    else:
+        ref_acq_path = int(ref_acq_path_in_well)
 
     # Loop over acquisitions, extract features and fit time decay models
     results_combined = []
     for acquisition_param in acquisition_params:
-        acquisition = acquisition_param.acquisition
-        if acquisition == reference_acquisition:
+        acq = acquisition_param.acquisition
+        logging.info(f"Start calculating time decay models for acquisition {acq}")
+        if acq == reference_acquisition:
             df_features = df_features_ref
         else:
-            df_features_acq_pd = ome_zarr_plate.concatenate_image_tables(
+            acq_images = ome_zarr_plate.get_images(int(acq))
+            # As above, workaround if more than one image path per acquisition exists
+            if zarr_ending is not None:
+                acq_images = {
+                    k: v for k, v in acq_images.items() if k.endswith(zarr_ending)
+                }
+
+            df_features_acq_pd = concatenate_image_tables_as(
+                images=acq_images.values(),
+                extras=_build_extras(acq_images.keys()),
+                table_cls=FeatureTableV1,
                 table_name=feature_table_name,
-                acquisition=int(acquisition),
                 index_key="index",
             )
 
@@ -226,6 +260,7 @@ def cellvoyager_time_decay(
                 df_features_acq_pd.dataframe, include_index=True
             ).with_columns(
                 pl.lit(label_name).alias("object"),
+                pl.lit(acq).alias("acquisition").cast(pl.UInt16),
                 (
                     pl.concat_str(
                         [
@@ -273,14 +308,24 @@ def cellvoyager_time_decay(
                 cs.matches(corr_features),
             )
             .pipe(unnest_structs, cols=["Centroid"])
-            .with_columns([pl.col("path_in_well").cast(pl.Int16)])
-        ).rename({"path_in_well": "acquisition"})
+            .with_columns(
+                [
+                    (
+                        pl.col("path_in_well").str.split("_").list.first()
+                        if zarr_ending is not None
+                        else pl.col("path_in_well")
+                    )
+                    .cast(pl.UInt16)
+                    .alias(
+                        "acquisition_path"
+                    )  # To distinguish path from acquisition cycle
+                ]
+            )
+        )
 
         # 3. Extract intensity and correlation features
-        df_intensity = (
-            df.select(sel.index - sel.hierarchy, sel.intensity)
-            .pipe(stack_column_name_to_column, index=sel.index, column_name="channel")
-            .pipe(split_channel_column)
+        df_intensity = df.select(sel.index - sel.hierarchy, sel.intensity).pipe(
+            stack_column_name_to_column, index=sel.index, column_name="channel"
         )
 
         CORRELATION_BY_ACQUISITION_MAP = get_correlation_by_acquisition_map(df)
@@ -292,8 +337,10 @@ def cellvoyager_time_decay(
         # Always use the reference acquisition to define the spherical radius cutoffs
         df_label = df.select(sel.index, sel.label)
 
-        if acquisition != reference_acquisition:
-            df_label_temp = df_label.filter(pl.col("acquisition") == ref_acq_path)
+        if acq != reference_acquisition:
+            df_label_temp = df_label.filter(
+                pl.col("acquisition") == reference_acquisition
+            )
             labels_to_keep = (
                 df_label_temp.filter(
                     pl.col("EquivalentSphericalRadius").is_between(
@@ -320,17 +367,16 @@ def cellvoyager_time_decay(
                 colors=["k"],
                 linestyles=["dotted", "dashed"],
             )
-            output_plots_dir = Path(tables_dir) / "__plots"
-            os.makedirs(output_plots_dir, exist_ok=True)
+
             plt.savefig(
-                Path(output_plots_dir)
+                output_plots_dir
                 / f"{feature_table_name}_equivalent_spherical_radius_cutoff.png",
                 dpi=300,
             )
             plt.close()
 
         # Merge cleaned label data with intensity and alignment data
-        index = ["ROI", "object", "label", "well", "channel", "stain", "acquisition"]
+        index = ["ROI", "object", "label", "well", "channel", "acquisition"]
         obj_index = ["ROI", "object", "label", "well"]
 
         df_clean = (
@@ -385,9 +431,10 @@ def cellvoyager_time_decay(
             )
 
         # Drop reference channels if acquisition is not the reference acquisition
-        if acquisition != reference_acquisition:
+        if acq != reference_acquisition:
             df_clean = df_clean.filter(pl.col("acquisition") != reference_acquisition)
 
+        logger.info(f"df_clean: {df_clean.select('acquisition').unique()}")
         # Aggregate intensity measurements per site
         logging.info("Calculating mean intensity per embryo and channel.")
         df_mean_per_embryo = (
@@ -415,12 +462,11 @@ def cellvoyager_time_decay(
         models, _ = plot_channel_t_decay_models(
             df_mean_per_embryo,
             output_dir=output_plots_dir,
-            time_decay_table_name=f"time_decay_models_c{acquisition}",
+            time_decay_table_name=f"time_decay_models_c{acq}",
         )
 
         # Store correction factors for each model and channel in a table
         results = []
-
         all_model_names = set()
         for ch_models in models.values():
             all_model_names.update(ch_models.keys())
