@@ -374,6 +374,7 @@ def measure_features(
                     channel_0_zarr_url = get_zarrurl_from_image_label(
                         well_url=well_url,
                         channel_label=channel_0_lbl,
+                        zarr_ending=zarr_ending,
                         level=level,
                     )
                     channel_0 = {
@@ -384,13 +385,17 @@ def measure_features(
                     channel_1_zarr_url = get_zarrurl_from_image_label(
                         well_url=well_url,
                         channel_label=channel_1_lbl,
+                        zarr_ending=zarr_ending,
                         level=level,
                     )
                     channel_1 = {
                         "channel_label": channel_1_lbl,
                         "channel_zarr_url": channel_1_zarr_url,
                     }
-
+                    logger.info(
+                        "Measuring colocalization for channel pair:"
+                        f"{channel_0_zarr_url=}, {channel_1_zarr_url=}"
+                    )
                     colocalization_roi_table = get_colocalization_features(
                         label_image=label_img,
                         channel0=channel_0,

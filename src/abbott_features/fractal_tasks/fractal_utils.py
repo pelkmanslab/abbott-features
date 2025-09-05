@@ -12,16 +12,23 @@ Zurich.
 """
 
 from pathlib import Path
+from typing import Optional
 
 import zarr
 from ngio import open_ome_zarr_container
 
 
-def get_zarrurl_from_image_label(well_url: Path, channel_label: str, level: str = "0"):
+def get_zarrurl_from_image_label(
+    well_url: Path,
+    channel_label: str,
+    zarr_ending: Optional[str] = None,
+    level: str = "0",
+):
     """Get the zarr_url for a specific iamge channel from an OME-Zarr file.
 
     Args:
         well_url: Path to well of OME-Zarr file e.g. /path_to_zarr/B/03.
+        zarr_ending: Optional ending of the OME-Zarr file. E.g. "registered".
         channel_label: Label of the channel to get zarr_url for.
         level: Pyramid level of the OME_Zarr image. Default is "0".
 
@@ -30,6 +37,9 @@ def get_zarrurl_from_image_label(well_url: Path, channel_label: str, level: str 
     """
     well_group = zarr.open(well_url, mode="r")
     for image in well_group.attrs["well"]["images"]:
+        print(image)
+        if zarr_ending is not None and not image["path"].endswith(zarr_ending):
+            continue
         zarr_url = well_url.joinpath(well_url, image["path"])
         ome_zarr_container = open_ome_zarr_container(zarr_url)
         channel_labels = ome_zarr_container.get_image(path=level).channel_labels

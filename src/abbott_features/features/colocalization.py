@@ -114,7 +114,7 @@ def get_colocalization_features(
 
     # Get the label image
     if isinstance(label_image, MaskedLabel):
-        lbls = label_image.get_roi_masked(int(roi.name)).astype("uint16")
+        lbls = label_image.get_roi_masked(int(roi.name)).astype(np.uint16)
         lbls_si = si.to_spatial_image(
             lbls,
             dims=axes_names,
@@ -122,7 +122,7 @@ def get_colocalization_features(
             name=label_image.meta.name,
         )
     else:
-        lbls = label_image.get_roi(roi).astype("uint16")
+        lbls = label_image.get_roi(roi).astype(np.uint16)
         lbls_si = si.to_spatial_image(
             lbls,
             dims=axes_names,
@@ -139,11 +139,7 @@ def get_colocalization_features(
         label=channel0["channel_label"]
     )
 
-    img0 = (
-        channel_0_images.get_roi(roi, c=channel_0_idx, mode="numpy")
-        .astype(np.uint16)
-        .squeeze()
-    )
+    img0 = channel_0_images.get_roi(roi, c=channel_0_idx).astype(np.uint16).squeeze()
 
     img0_si = si.to_spatial_image(
         img0,
@@ -158,17 +154,14 @@ def get_colocalization_features(
     channel_1_idx = channel_1_images.meta.get_channel_idx(
         label=channel1["channel_label"]
     )
-    img1 = (
-        channel_1_images.get_roi(roi, c=channel_1_idx, mode="numpy")
-        .astype("uint16")
-        .squeeze()
-    )
+    img1 = channel_1_images.get_roi(roi, c=channel_1_idx).astype(np.uint16).squeeze()
     img1_si = si.to_spatial_image(
         img1,
         dims=axes_names,
         scale=pixel_sizes,
         name=channel1["channel_label"],
     )
+
     # Apply corrections if provided
     if kwargs_decay_corr["z_decay_correction"] is not None:
         z_decay_model = kwargs_decay_corr["z_decay_correction"]
