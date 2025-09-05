@@ -9,13 +9,12 @@ from typing import (
     Union,
 )
 
-import ngio
-import ngio.common
-import ngio.common._roi
-import ngio.images
 import numpy as np
 import polars as pl
 import spatial_image as si
+from ngio import open_ome_zarr_container
+from ngio.common._roi import Roi
+from ngio.images import Label
 from ngio.images._masked_image import MaskedLabel
 from scipy.stats import chi2_contingency, kendalltau, pearsonr, spearmanr
 from skimage.measure import regionprops_table
@@ -94,12 +93,12 @@ RESOURCE_COLUMNS = ("channel0", "channel1")
 
 
 def get_colocalization_features(
-    label_image: Union[ngio.images.Label, MaskedLabel],
+    label_image: Union[Label, MaskedLabel],
     channel0: dict[str, Path],
     channel1: dict[str, Path],
     *,
     level: str,
-    roi: ngio.common._roi.Roi,
+    roi: Roi,
     kwargs_decay_corr: dict,
     features: tuple[ColocalizationFeature, ...] = tuple(DefaultColocalizationFeature),
     index_columns: tuple[Literal["label", "label_image"], ...] = ("label",),
@@ -115,7 +114,7 @@ def get_colocalization_features(
 
     # Get the label image
     if isinstance(label_image, MaskedLabel):
-        lbls = label_image.get_roi_masked(int(roi.name)).astype("uint16")
+        lbls = label_image.get_roi_masked(int(roi.name)).astype(np.uint16)
         lbls_si = si.to_spatial_image(
             lbls,
             dims=axes_names,
@@ -123,38 +122,54 @@ def get_colocalization_features(
             name=label_image.meta.name,
         )
     else:
-        lbls = label_image.get_roi(roi).astype("uint16")
+        lbls = label_image.get_roi(roi).astype(np.uint16)
         lbls_si = si.to_spatial_image(
             lbls,
             dims=axes_names,
             scale=pixel_sizes,
             name=label_image.meta.name,
         )
+    lbls_si.attrs["scale_dict"] = pixel_sizes
+
     # Get the channel images
-    channel_0_images = ngio.open_ome_zarr_container(
-        channel0["channel_zarr_url"]
-    ).get_image(path=level)
+    channel_0_images = open_ome_zarr_container(channel0["channel_zarr_url"]).get_image(
+        path=level
+    )
     channel_0_idx = channel_0_images.meta.get_channel_idx(
         label=channel0["channel_label"]
     )
 
-    # Get the first channel image
-    img1 = (
-        channel_0_images.get_roi(roi, c=channel_0_idx, mode="numpy")
-        .astype("uint16")
-        .squeeze()
-    )
+    img0 = channel_0_images.get_roi(roi, c=channel_0_idx).astype(np.uint16).squeeze()
 
-    img1_si = si.to_spatial_image(
-        img1,
+    img0_si = si.to_spatial_image(
+        img0,
         dims=axes_names,
         scale=pixel_sizes,
         name=channel0["channel_label"],
     )
 
+    channel_1_images = open_ome_zarr_container(channel1["channel_zarr_url"]).get_image(
+        path=level
+    )
+    channel_1_idx = channel_1_images.meta.get_channel_idx(
+        label=channel1["channel_label"]
+    )
+    img1 = channel_1_images.get_roi(roi, c=channel_1_idx).astype(np.uint16).squeeze()
+    img1_si = si.to_spatial_image(
+        img1,
+        dims=axes_names,
+        scale=pixel_sizes,
+        name=channel1["channel_label"],
+    )
+
     # Apply corrections if provided
     if kwargs_decay_corr["z_decay_correction"] is not None:
         z_decay_model = kwargs_decay_corr["z_decay_correction"]
+        img0_si = apply_z_decay_models(
+            z_decay_model,
+            img0_si,
+            lbls_si,
+        )
         img1_si = apply_z_decay_models(
             z_decay_model,
             img1_si,
@@ -162,47 +177,19 @@ def get_colocalization_features(
         )
     if kwargs_decay_corr["t_decay_correction_df"] is not None:
         correction_factors_df = kwargs_decay_corr["t_decay_correction_df"]
+        img0_si = apply_t_decay_factor(
+            img0_si,
+            correction_factors_df,
+            ROI_id=roi.name,
+        )
         img1_si = apply_t_decay_factor(
             img1_si,
             correction_factors_df,
             ROI_id=roi.name,
         )
-    img1 = img1_si.to_numpy()
 
-    # Get the second channel image
-    channel_1_images = ngio.open_ome_zarr_container(
-        channel1["channel_zarr_url"]
-    ).get_image(path=level)
-    channel_1_idx = channel_1_images.meta.get_channel_idx(
-        label=channel1["channel_label"]
-    )
-    img2 = (
-        channel_1_images.get_roi(roi, c=channel_1_idx, mode="numpy")
-        .astype("uint16")
-        .squeeze()
-    )
-    img2_si = si.to_spatial_image(
-        img2,
-        dims=axes_names,
-        scale=pixel_sizes,
-        name=channel1["channel_label"],
-    )
-    # Apply corrections if provided
-    if kwargs_decay_corr["z_decay_correction"] is not None:
-        z_decay_model = kwargs_decay_corr["z_decay_correction"]
-        img2_si = apply_z_decay_models(
-            z_decay_model,
-            img2_si,
-            lbls_si,
-        )
-    if kwargs_decay_corr["t_decay_correction_df"] is not None:
-        correction_factors_df = kwargs_decay_corr["t_decay_correction_df"]
-        img2_si = apply_t_decay_factor(
-            img2_si,
-            correction_factors_df,
-            ROI_id=roi.name,
-        )
-    img2 = img2_si.to_numpy()
+    img0 = img0_si.to_numpy()
+    img1 = img1_si.to_numpy()
 
     valid_features = tuple(ColocalizationFeature(e) for e in features)
 
@@ -218,21 +205,13 @@ def get_colocalization_features(
         corrs = []
         for slc, label in zip(slices, labels, strict=False):
             lbls_slc = lbls[slc]
+            img0_slc = img0[slc]
             img1_slc = img1[slc]
-            img2_slc = img2[slc]
+            img0_px = img0_slc[np.where(lbls_slc == label)]
             img1_px = img1_slc[np.where(lbls_slc == label)]
-            img2_px = img2_slc[np.where(lbls_slc == label)]
             try:
-                # Check for constant arrays which will cause correlation functions
-                # to fail
-                if np.all(img1_px == img1_px[0]) or np.all(img2_px == img2_px[0]):
-                    # When one or both arrays are constant, correlation is undefined
-                    res = np.nan
-                else:
-                    res = func(img1_px, img2_px)
+                res = func(img0_px, img1_px)
             except ValueError:
-                # This can happen when arrays have no variance or other
-                # statistical requirements aren't met
                 res = np.nan
             corrs.append(res)
         df = df.with_columns(pl.Series(metric, corrs))

@@ -2,11 +2,12 @@
 
 from typing import TypeAlias, Union
 
+import numpy as np
 import polars as pl
 import spatial_image as si
 from ngio.common import Roi
 from ngio.images import Image, Label
-from ngio.images._masked_image import MaskedLabel
+from ngio.images._masked_image import MaskedImage, MaskedLabel
 
 from abbott_features.features._base import get_si_features_df
 from abbott_features.features.constants import IntensityFeature
@@ -20,7 +21,7 @@ IntensityFeaturesLike: TypeAlias = tuple[IntensityFeature, ...] | tuple[str, ...
 
 def get_intensity_features(
     label_image: Union[Label, MaskedLabel],
-    images: Image,
+    images: Union[Image, MaskedImage],
     channel_label: str,
     roi: Roi,
     kwargs_decay_corr: dict,
@@ -30,21 +31,22 @@ def get_intensity_features(
     axes_names = label_image.axes_mapper.on_disk_axes_names
     pixel_sizes = label_image.pixel_size.as_dict()
 
+    channel_idx = images.meta.get_channel_idx(label=channel_label)
+
     if isinstance(label_image, MaskedLabel):
-        label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
+        label_numpy = label_image.get_roi_masked(int(roi.name)).astype(np.uint16)
     else:
-        label_numpy = label_image.get_roi(roi).astype("uint16")
+        label_numpy = label_image.get_roi(roi).astype(np.uint16)
+
+    image_numpy = (images.get_roi(roi, c=channel_idx)).astype(np.uint16).squeeze()
 
     label_spatial_image = si.to_spatial_image(
         label_numpy,
         dims=axes_names,
         scale=pixel_sizes,
     )
+    label_spatial_image.attrs["scale_dict"] = pixel_sizes
 
-    channel_idx = images.meta.get_channel_idx(label=channel_label)
-    image_numpy = (
-        images.get_roi(roi, c=channel_idx, mode="numpy").astype("uint16").squeeze()
-    )
     intensity_spatial_image = si.to_spatial_image(
         image_numpy,
         dims=axes_names,

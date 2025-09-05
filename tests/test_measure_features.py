@@ -27,7 +27,7 @@ def test_data_dir(tmp_path: Path, zenodo_zarr: Path) -> str:
     """
     Copy a test-data folder into a temporary folder.
     """
-    dest_dir = (tmp_path / "data").as_posix()
+    dest_dir = (tmp_path / "data.zarr").as_posix()
     debug(zenodo_zarr, dest_dir)
     shutil.copytree(zenodo_zarr, dest_dir)
     return dest_dir
@@ -73,6 +73,7 @@ def test_decays(test_data_dir):
     z_decay(
         zarr_urls=zarr_urls,
         zarr_dir=test_data_dir,
+        reference_acquisition=reference_acquisition,
         feature_table_name="nuclei",
         label_name="nuclei",
         embryo_label_name="emb_linked",
@@ -134,7 +135,9 @@ def test_decays(test_data_dir):
             measure_label_features=False,
             measure_intensity_features=measure_intensity_features,
             measure_colocalization_features=measure_colocalization_features,
-            z_decay_correction="LogLinear(features=Centroid-z, loss=huber)",
+            z_decay_correction=(
+                "Exp(features=MediumPath;EmbryoPath, loss=huber, pos_offset=True)"
+            ),
             t_decay_correction=t_decay_correction,
             output_table_name="nuclei_t_corrected",
             overwrite=True,
