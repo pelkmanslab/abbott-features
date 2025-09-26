@@ -1,6 +1,7 @@
 """Contains the list of tasks available to fractal."""
 
 from fractal_task_tools.task_models import (
+    CompoundTask,
     NonParallelTask,
     ParallelTask,
 )
@@ -52,5 +53,15 @@ TASK_LIST = [
         ],
         modality="HCS",
         docs_info="file:docs_info/z_decay.md",
+    ),
+    CompoundTask(
+        name="Calculate Cycle Registration Quality",
+        executable_init="fractal_tasks/init_registration_quality_hcs.py",
+        executable="fractal_tasks/cycle_registration_quality.py",
+        meta={"cpus_per_task": 4, "mem": 16000},
+        category="Registration",
+        modality="HCS",
+        tags=["Multiplexing", "3D"],
+        docs_info="file:docs_info/calculate_registration_quality.md",
     ),
 ]
