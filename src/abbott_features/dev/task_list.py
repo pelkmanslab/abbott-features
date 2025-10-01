@@ -58,6 +58,7 @@ TASK_LIST = [
         name="Calculate Cycle Registration Quality",
         executable_init="fractal_tasks/init_registration_quality_hcs.py",
         executable="fractal_tasks/cycle_registration_quality.py",
+        input_types=dict(registered=True),
         meta={"cpus_per_task": 4, "mem": 16000},
         category="Registration",
         modality="HCS",
