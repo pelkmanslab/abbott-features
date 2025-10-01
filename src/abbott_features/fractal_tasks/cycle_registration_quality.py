@@ -145,7 +145,7 @@ def cycle_registration_quality(
 
         # Save results
         feature_table = FeatureTableV1(table_out, reference_label="label")
-        ome_zarr_ref.add_table(
+        ome_zarr_mov.add_table(
             name=output_table_name,
             table=feature_table,
             backend="experimental_parquet_v1",

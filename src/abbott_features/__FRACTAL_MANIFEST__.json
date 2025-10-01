@@ -554,6 +554,9 @@
     },
     {
       "name": "Calculate Cycle Registration Quality",
+      "input_types": {
+        "registered": true
+      },
       "category": "Registration",
       "modality": "HCS",
       "tags": [
@@ -589,6 +592,11 @@
             "title": "Reference Acquisition",
             "type": "integer",
             "description": "Which acquisition was used as reference. Needs to match the acquisition metadata in the OME-Zarr image."
+          },
+          "zarr_ending": {
+            "title": "Zarr Ending",
+            "type": "string",
+            "description": "Optional; file ending of the OME-Zarrs if multiple registered OME-Zarrs are present in the same directory. Default: None."
           }
         },
         "required": [
