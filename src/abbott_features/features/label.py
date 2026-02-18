@@ -25,7 +25,7 @@ def get_label_features(
     features: LabelFeatureLike = tuple(DefaultLabelFeature),
 ) -> pl.DataFrame:
     """Get label features from a label image."""
-    axes_names = label_image.axes_mapper.on_disk_axes_names
+    axes_names = label_image.axes
     pixel_sizes = label_image.pixel_size.as_dict()
 
     if isinstance(label_image, MaskedLabel):

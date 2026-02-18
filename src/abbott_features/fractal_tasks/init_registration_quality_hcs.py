@@ -1,12 +1,13 @@
 """Init registration module for image-based registration based on tasks-core."""
 
 import logging
-from typing import Any
+from typing import Any, Optional
 
-from fractal_tasks_core.tasks.image_based_registration_hcs_init import (
+from pydantic import validate_call
+
+from abbott_features.fractal_tasks.image_based_registration_hcs_init import (
     image_based_registration_hcs_init,
 )
-from pydantic import validate_call
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ def init_registration_quality_hcs(
     zarr_dir: str,
     # Core parameters
     reference_acquisition: int = 0,
+    zarr_ending: Optional[str] = None,
 ) -> dict[str, list[dict[str, Any]]]:
     """Initializes registration quality control for HCS OME-Zarrs.
 
@@ -40,11 +42,16 @@ def init_registration_quality_hcs(
             (standard argument for Fractal tasks, managed by Fractal server).
         reference_acquisition: Which acquisition was used as reference. Needs to
             match the acquisition metadata in the OME-Zarr image.
+        zarr_ending: Optional; file ending of the OME-Zarrs if multiple registered
+            OME-Zarrs are present in the same directory. Default: None.
 
     Returns:
         task_output: Dictionary for Fractal server that contains a
             parallelization list.
     """
+    if zarr_ending is not None:
+        zarr_urls = [z for z in zarr_urls if z.endswith(zarr_ending)]
+
     return image_based_registration_hcs_init(
         zarr_urls=zarr_urls,
         zarr_dir=zarr_dir,

@@ -4,6 +4,7 @@ from functools import partial
 from typing import NamedTuple, Union
 
 import itk
+import numpy as np
 import polars as pl
 import spatial_image as si
 from ngio.common import Roi
@@ -78,7 +79,7 @@ def get_distance_features(
     its parent label (e.g. embryo mask).
     """
     # Load meta data
-    dims = label_image.axes_mapper.on_disk_axes_names
+    dims = label_image.axes
     scale = label_image.pixel_size.as_dict()
 
     # Convert the label images to spatial_images
@@ -111,7 +112,24 @@ def get_distance_features(
         index = ["object", "label"]
     else:
         index = "label"
-    mask = _get_mask(label_spatial_image_to, int(roi.name))
+
+    # TODO: needs to be better fixed to work with multiple labels in the same ROI
+    # (e.g. multiple embryos in the same ROI) if not MaskedLabel is used.
+    if isinstance(label_image_to, MaskedLabel):
+        mask = _get_mask(label_spatial_image_to, int(roi.name))
+    else:
+        # Get unique labels that are not 0
+        lbls_unique = np.unique(label_numpy)
+        lbls_unique = lbls_unique[lbls_unique != 0]
+        if len(lbls_unique) > 1:
+            raise ValueError(
+                f"Multiple labels found in label_image_to for ROI {roi.name}. "
+                "Please use a MaskedLabel or ensure that there is only one label "
+                f" in the ROI. Found labels: {lbls_unique}"
+            )
+        else:
+            lbl_id = lbls_unique[0]
+        mask = _get_mask(label_spatial_image_to, lbl_id)
 
     dfs = []
     for name, distance_function in distance_transforms.items():

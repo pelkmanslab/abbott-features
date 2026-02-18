@@ -9,6 +9,20 @@ from fractal_task_tools.task_models import (
 AUTHORS = "Ruth Hornbachner, Maks Hess"
 DOCS_LINK = "https://github.com/pelkmanslab/abbott-features"
 
+INPUT_MODELS = [
+    ("abbott_features", "fractal_tasks/io_models.py", "IntensityFeaturesInputModel"),
+    ("abbott_features", "fractal_tasks/io_models.py", "DistanceFeaturesInputModel"),
+    (
+        "abbott_features",
+        "fractal_tasks/io_models.py",
+        "ColocalizationFeaturesInputModel",
+    ),
+    ("abbott_features", "fractal_tasks/io_models.py", "NeighborhoodFeaturesInputModel"),
+    ("abbott_features", "fractal_tasks/io_models.py", "TimeDecayInputModel"),
+    ("abbott_features", "fractal_tasks/io_models.py", "InitArgsRegistration"),
+    ("abbott_features", "fractal_tasks/io_models.py", "AcquisitionFolderInputModel"),
+]
+
 TASK_LIST = [
     ParallelTask(
         name="Measure Features",
@@ -58,6 +72,7 @@ TASK_LIST = [
         name="Calculate Cycle Registration Quality",
         executable_init="fractal_tasks/init_registration_quality_hcs.py",
         executable="fractal_tasks/cycle_registration_quality.py",
+        input_types=dict(registered=True),
         meta={"cpus_per_task": 4, "mem": 16000},
         category="Registration",
         modality="HCS",

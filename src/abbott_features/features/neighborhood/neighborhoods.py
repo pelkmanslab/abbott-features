@@ -9,14 +9,16 @@ import logging
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from itertools import accumulate, product
-from typing import Literal, ParamSpec, TypeAlias, TypeVar, cast
+from typing import Literal, ParamSpec, TypeAlias, TypeVar, Union, cast
 
 import networkx as nx
-import ngio
 import numpy as np
 import polars as pl
 import spatial_image as si
 from attrs import asdict, frozen
+from ngio.common._roi import Roi
+from ngio.images import Label
+from ngio.images._masked_image import MaskedLabel
 from numpy.typing import NDArray
 from scipy import spatial
 from scipy.ndimage import map_coordinates
@@ -698,29 +700,37 @@ class NeighborhoodQueryObject:
     @classmethod
     def from_labelimage(
         cls,
-        label_image: ngio.images.Label | dict[str, ngio.images.Label],
-        label_image_to: ngio.images.Label | dict[str, ngio.images.Label] | None = None,
-        roi: ngio.common.Roi | None = None,
+        label_image: Union[Label, MaskedLabel],
+        label_image_to: Union[Label, MaskedLabel] | None = None,
+        roi: Roi = None,
         mask_n_samples: int = 100,
     ) -> "NeighborhoodQueryObject":
-        axes_names = label_image.axes_mapper.on_disk_axes_names
+        axes_names = label_image.axes
         pixel_sizes = label_image.pixel_size.as_dict()
         scale = label_image.pixel_size.zyx
 
-        label_numpy = label_image.get_roi(roi.name).astype("uint16")
+        # Convert the label images to spatial_images
+        if isinstance(label_image, MaskedLabel):
+            label_numpy = label_image.get_roi_masked_as_numpy(int(roi.name)).astype(
+                np.uint16
+            )
+        else:
+            label_numpy = label_image.get_roi_as_numpy(roi).astype(np.uint16)
+
         lbl = si.to_spatial_image(
             label_numpy,
             dims=axes_names,
             scale=pixel_sizes,
         )
 
-        label_numpy_to = label_image_to.get_roi(roi).astype("uint16")
-        mask = si.to_spatial_image(
-            label_numpy_to,
-            dims=axes_names,
-            scale=pixel_sizes,
-            name=label_image_to.meta.name,
-        )
+        if label_image_to is not None:
+            label_numpy_to = label_image_to.get_roi_as_numpy(roi).astype(np.uint16)
+            mask = si.to_spatial_image(
+                label_numpy_to,
+                dims=axes_names,
+                scale=pixel_sizes,
+                name=label_image_to.meta.name,
+            )
 
         if isinstance(lbl, dict):
             if mask is not None:

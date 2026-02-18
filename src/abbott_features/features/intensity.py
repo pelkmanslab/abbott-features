@@ -28,10 +28,10 @@ def get_intensity_features(
     features: IntensityFeaturesLike = tuple(IntensityFeature),
 ) -> pl.DataFrame:
     """Get intensity features for a given label image and intensity image."""
-    axes_names = label_image.axes_mapper.on_disk_axes_names
+    axes_names = label_image.axes
     pixel_sizes = label_image.pixel_size.as_dict()
 
-    channel_idx = images.meta.get_channel_idx(label=channel_label)
+    channel_idx = images.get_channel_idx(channel_label=channel_label)
 
     if isinstance(label_image, MaskedLabel):
         label_numpy = label_image.get_roi_masked(int(roi.name)).astype(np.uint16)

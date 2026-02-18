@@ -67,7 +67,7 @@ def measure_features(
     label_name: str,
     parent_label_names: Optional[list[str]] = None,
     reference_acquisition: Optional[int] = None,
-    level: str = "0",
+    level_path: str = "0",
     measure_label_features: bool = False,
     measure_intensity_features: IntensityFeaturesInputModel = (
         IntensityFeaturesInputModel()
@@ -97,7 +97,7 @@ def measure_features(
         reference_acquisition: The reference acquisition that contains the label
             image and table to perform the measurement on. If not provided, the
             task assumes that each acquisition has its own label image and table.
-        level: Level of the OME-Zarr label to copy from. Valid choices are
+        level_path: Level of the OME-Zarr label to copy from. Valid choices are
             "0", "1", etc. (depending on which levels are available in the
             OME-Zarr label).
         parent_label_names: List of parent label names relative to child `label_name`.
@@ -184,11 +184,9 @@ def measure_features(
 
     # Get ROI table to loop over and check if it is a masking ROI table if use_masks
     if use_masks:
-        roi_table = ome_zarr_container_ref.get_table(
-            ROI_table_name, check_type="masking_roi_table"
-        )
+        roi_table = ome_zarr_container_ref.get_masking_roi_table(ROI_table_name)
     else:
-        roi_table = ome_zarr_container_ref.get_table(ROI_table_name)
+        roi_table = ome_zarr_container_ref.get_generic_roi_table(ROI_table_name)
 
     # Get the label image
     if use_masks:
@@ -196,10 +194,10 @@ def measure_features(
             label_name,
             masking_label_name=masking_label_name,
             masking_table_name=ROI_table_name,
-            path=level,
+            path=level_path,
         )
     else:
-        label_img = ome_zarr_container_ref.get_label(label_name, path=level)
+        label_img = ome_zarr_container_ref.get_label(label_name, path=level_path)
 
     # Check if the max label value exceeds uint16 range
     # Need to convert to uint16 as itk.LabelImageToShapeLabelMapFilter
@@ -218,7 +216,7 @@ def measure_features(
             )
 
     # Get the images
-    images = ome_zarr_container.get_image(path=level)
+    images = ome_zarr_container.get_image(path=level_path)
 
     # Get channels to include/exclude
     if measure_intensity_features.measure:
@@ -298,13 +296,13 @@ def measure_features(
                         label_name,
                         masking_label_name=masking_label_name,
                         masking_table_name=ROI_table_name,
-                        path=level,
+                        path=level_path,
                     )
                     for label_name in parent_label_names
                 ]
             else:
                 parent_label_images = [
-                    ome_zarr_container_ref.get_label(label_name, path=level)
+                    ome_zarr_container_ref.get_label(label_name, path=level_path)
                     for label_name in parent_label_names
                 ]
 
@@ -347,14 +345,14 @@ def measure_features(
                 )
                 if use_masks:
                     label_img_to = ome_zarr_container_ref.get_masked_label(
-                        measure_distance_features.label_name_to,
+                        label_name=measure_distance_features.label_name_to,
                         masking_label_name=masking_label_name,
                         masking_table_name=ROI_table_name,
-                        path=level,
+                        path=level_path,
                     )
                 else:
                     label_img_to = ome_zarr_container_ref.get_label(
-                        measure_distance_features.label_name_to, path=level
+                        measure_distance_features.label_name_to, path=level_path
                     )
                 distance_roi_table = get_distance_features(
                     label_image=label_img, label_image_to=label_img_to, roi=roi
@@ -375,7 +373,7 @@ def measure_features(
                         well_url=well_url,
                         channel_label=channel_0_lbl,
                         zarr_ending=zarr_ending,
-                        level=level,
+                        level=level_path,
                     )
                     channel_0 = {
                         "channel_label": channel_0_lbl,
@@ -386,7 +384,7 @@ def measure_features(
                         well_url=well_url,
                         channel_label=channel_1_lbl,
                         zarr_ending=zarr_ending,
-                        level=level,
+                        level=level_path,
                     )
                     channel_1 = {
                         "channel_label": channel_1_lbl,
@@ -400,7 +398,7 @@ def measure_features(
                         label_image=label_img,
                         channel0=channel_0,
                         channel1=channel_1,
-                        level=level,
+                        level=level_path,
                         roi=roi,
                         kwargs_decay_corr=kwargs_decay_corr,
                     )
@@ -413,12 +411,19 @@ def measure_features(
 
         if measure_neighborhood_features.measure:
             if zarr_url == ref_zarr_url:
+                label_img_mask_name = measure_neighborhood_features.label_img_mask
+
                 logging.info(
-                    f"Measure neighborhood features for {label_name=} in {zarr_url=}"
+                    f"Measure neighborhood features for {label_name=} "
+                    f"with {label_img_mask_name=} in {zarr_url=}"
                 )
-                label_img_mask = ome_zarr_container_ref.get_label(
-                    measure_neighborhood_features.label_img_mask, path=level
-                )
+                if label_img_mask_name is not None:
+                    label_img_mask = ome_zarr_container_ref.get_label(
+                        label_img_mask_name, path=level_path
+                    )
+                else:
+                    label_img_mask = None
+
                 neighborhood_table = get_neighborhood_features(
                     label_image=label_img,
                     label_img_mask=label_img_mask,
@@ -439,7 +444,7 @@ def measure_features(
         if output_table_name is None:
             output_table_name = label_name
 
-        feature_table = FeatureTableV1(table_out, reference_label="label")
+        feature_table = FeatureTableV1(table_out, reference_label=label_name)
         ome_zarr_container.add_table(
             name=output_table_name,
             table=feature_table,

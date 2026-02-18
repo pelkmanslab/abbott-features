@@ -24,18 +24,18 @@ def get_parent_objects(
     parent_prefix: str | None = "parent",
 ) -> pl.DataFrame:
     if isinstance(label_image, MaskedLabel):
-        label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
+        label_numpy = label_image.get_roi_masked_as_numpy(int(roi.name))
     else:
-        label_numpy = label_image.get_roi(roi).astype("uint16")
+        label_numpy = label_image.get_roi_as_numpy(roi)
 
     results = {}
     props = regionprops(label_numpy)
     labels = [prop.label for prop in props]
     for lbl_other in parent_label_images:
         if isinstance(lbl_other, MaskedLabel):
-            lbl_other_numpy = lbl_other.get_roi_masked(int(roi.name)).astype("uint16")
+            lbl_other_numpy = lbl_other.get_roi_masked_as_numpy(int(roi.name))
         else:
-            lbl_other_numpy = lbl_other.get_roi(roi).astype("uint16")
+            lbl_other_numpy = lbl_other.get_roi_as_numpy(roi)
         props = regionprops(
             label_numpy, lbl_other_numpy, extra_properties=(parent_label,)
         )

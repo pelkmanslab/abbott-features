@@ -109,12 +109,12 @@ def get_colocalization_features(
     return_metadata: bool = False,
 ) -> pl.DataFrame:
     """Get colocalization features from a label image and two channels."""
-    axes_names = label_image.axes_mapper.on_disk_axes_names
+    axes_names = label_image.axes
     pixel_sizes = label_image.pixel_size.as_dict()
 
     # Get the label image
     if isinstance(label_image, MaskedLabel):
-        lbls = label_image.get_roi_masked(int(roi.name)).astype(np.uint16)
+        lbls = label_image.get_roi_masked_as_numpy(int(roi.name))
         lbls_si = si.to_spatial_image(
             lbls,
             dims=axes_names,
@@ -122,7 +122,7 @@ def get_colocalization_features(
             name=label_image.meta.name,
         )
     else:
-        lbls = label_image.get_roi(roi).astype(np.uint16)
+        lbls = label_image.get_roi_as_numpy(roi)
         lbls_si = si.to_spatial_image(
             lbls,
             dims=axes_names,
@@ -135,11 +135,11 @@ def get_colocalization_features(
     channel_0_images = open_ome_zarr_container(channel0["channel_zarr_url"]).get_image(
         path=level
     )
-    channel_0_idx = channel_0_images.meta.get_channel_idx(
-        label=channel0["channel_label"]
+    channel_0_idx = channel_0_images.get_channel_idx(
+        channel_label=channel0["channel_label"]
     )
 
-    img0 = channel_0_images.get_roi(roi, c=channel_0_idx).astype(np.uint16).squeeze()
+    img0 = channel_0_images.get_roi_as_numpy(roi, c=channel_0_idx)
 
     img0_si = si.to_spatial_image(
         img0,
@@ -151,10 +151,11 @@ def get_colocalization_features(
     channel_1_images = open_ome_zarr_container(channel1["channel_zarr_url"]).get_image(
         path=level
     )
-    channel_1_idx = channel_1_images.meta.get_channel_idx(
-        label=channel1["channel_label"]
+    channel_1_idx = channel_1_images.get_channel_idx(
+        channel_label=channel1["channel_label"]
     )
-    img1 = channel_1_images.get_roi(roi, c=channel_1_idx).astype(np.uint16).squeeze()
+    img1 = channel_1_images.get_roi_as_numpy(roi, c=channel_1_idx)
+
     img1_si = si.to_spatial_image(
         img1,
         dims=axes_names,
@@ -209,10 +210,14 @@ def get_colocalization_features(
             img1_slc = img1[slc]
             img0_px = img0_slc[np.where(lbls_slc == label)]
             img1_px = img1_slc[np.where(lbls_slc == label)]
-            try:
-                res = func(img0_px, img1_px)
-            except ValueError:
+
+            if img0_px.size < 2 or img1_px.size < 2:
                 res = np.nan
+            else:
+                try:
+                    res = func(img0_px, img1_px)
+                except ValueError:
+                    res = np.nan
             corrs.append(res)
         df = df.with_columns(pl.Series(metric, corrs))
 

@@ -65,7 +65,8 @@
                   "$ref": "#/$defs/ChannelPairInputModel"
                 },
                 "title": "Channel Pair",
-                "type": "array"
+                "type": "array",
+                "description": "Name of the channel pair to measure colocalization features."
               }
             },
             "required": [
@@ -79,7 +80,8 @@
             "properties": {
               "label_name_to": {
                 "title": "Label Name To",
-                "type": "string"
+                "type": "string",
+                "description": "Name of the label image to measure distance to e.g. \"embryo\" or \"organoid\"."
               }
             },
             "title": "DistanceFeaturesInputModel",
@@ -91,21 +93,24 @@
               "measure": {
                 "default": false,
                 "title": "Measure",
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Whether to measure intensity features or not."
               },
               "channels_to_include": {
                 "items": {
                   "$ref": "#/$defs/ChannelInputModel"
                 },
                 "title": "Channels To Include",
-                "type": "array"
+                "type": "array",
+                "description": "Channels to include in the measurement."
               },
               "channels_to_exclude": {
                 "items": {
                   "$ref": "#/$defs/ChannelInputModel"
                 },
                 "title": "Channels To Exclude",
-                "type": "array"
+                "type": "array",
+                "description": "Channels to exclude from the measurement."
               }
             },
             "title": "IntensityFeaturesInputModel",
@@ -117,11 +122,13 @@
               "measure": {
                 "default": false,
                 "title": "Measure",
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Whether to measure neighborhood features or not."
               },
               "label_img_mask": {
                 "title": "Label Img Mask",
-                "type": "string"
+                "type": "string",
+                "description": "Name of the label image to measure neighborhood in e.g. \"embryo\" or \"organoid\"."
               }
             },
             "title": "NeighborhoodFeaturesInputModel",
@@ -138,11 +145,13 @@
                   "correctionFactor-LogLinear"
                 ],
                 "title": "Correction Factor",
-                "type": "string"
+                "type": "string",
+                "description": "Literal for the type of time decay model to use."
               },
               "table_name": {
                 "title": "Table Name",
-                "type": "string"
+                "type": "string",
+                "description": "Name of the table containing the time decay correction factors."
               }
             },
             "title": "TimeDecayInputModel",
@@ -174,9 +183,9 @@
             "type": "integer",
             "description": "The reference acquisition that contains the label image and table to perform the measurement on. If not provided, the task assumes that each acquisition has its own label image and table."
           },
-          "level": {
+          "level_path": {
             "default": "0",
-            "title": "Level",
+            "title": "Level Path",
             "type": "string",
             "description": "Level of the OME-Zarr label to copy from. Valid choices are \"0\", \"1\", etc. (depending on which levels are available in the OME-Zarr label)."
           },
@@ -187,11 +196,7 @@
             "description": "Whether to measure label features."
           },
           "measure_intensity_features": {
-            "allOf": [
-              {
-                "$ref": "#/$defs/IntensityFeaturesInputModel"
-              }
-            ],
+            "$ref": "#/$defs/IntensityFeaturesInputModel",
             "default": {
               "measure": false,
               "channels_to_include": null,
@@ -201,29 +206,17 @@
             "description": "From which channels intensity features should be measured. If not provided, the task will not measure any intensity features."
           },
           "measure_distance_features": {
-            "allOf": [
-              {
-                "$ref": "#/$defs/DistanceFeaturesInputModel"
-              }
-            ],
+            "$ref": "#/$defs/DistanceFeaturesInputModel",
             "title": "Measure Distance Features",
             "description": "If `label_name_to` is provided, the task will measure distance features of `label_name` relative to `label_name_to` e.g. `embryo` or `organoid` segmentation."
           },
           "measure_colocalization_features": {
-            "allOf": [
-              {
-                "$ref": "#/$defs/ColocalizationFeaturesInputModel"
-              }
-            ],
+            "$ref": "#/$defs/ColocalizationFeaturesInputModel",
             "title": "Measure Colocalization Features",
             "description": "If `channel_pair` is set, the task will measure colocalization features per channel pair. E.g. colocalization between `channel_0` and `channel_1`."
           },
           "measure_neighborhood_features": {
-            "allOf": [
-              {
-                "$ref": "#/$defs/NeighborhoodFeaturesInputModel"
-              }
-            ],
+            "$ref": "#/$defs/NeighborhoodFeaturesInputModel",
             "default": {
               "measure": false,
               "label_img_mask": null
@@ -237,11 +230,7 @@
             "description": "Name of z-decay model to use. Models are stored in /path_to_zarr_plate/models/z_decay/ ."
           },
           "t_decay_correction": {
-            "allOf": [
-              {
-                "$ref": "#/$defs/TimeDecayInputModel"
-              }
-            ],
+            "$ref": "#/$defs/TimeDecayInputModel",
             "title": "T Decay Correction",
             "description": "Takes the time decay correction factor `correction_factor` and `table_name` of the dataframe that contains the correction factors."
           },
@@ -307,11 +296,13 @@
             "properties": {
               "acquisition": {
                 "title": "Acquisition",
-                "type": "integer"
+                "type": "integer",
+                "description": "Acquistion (cycle) number."
               },
               "image_dir": {
                 "title": "Image Dir",
-                "type": "string"
+                "type": "string",
+                "description": "path to the folder that contains the Cellvoyager image files and the MeasurementData & MeasurementDetail metadata files."
               }
             },
             "required": [
@@ -554,6 +545,9 @@
     },
     {
       "name": "Calculate Cycle Registration Quality",
+      "input_types": {
+        "registered": true
+      },
       "category": "Registration",
       "modality": "HCS",
       "tags": [
@@ -589,6 +583,11 @@
             "title": "Reference Acquisition",
             "type": "integer",
             "description": "Which acquisition was used as reference. Needs to match the acquisition metadata in the OME-Zarr image."
+          },
+          "zarr_ending": {
+            "title": "Zarr Ending",
+            "type": "string",
+            "description": "Optional; file ending of the OME-Zarrs if multiple registered OME-Zarrs are present in the same directory. Default: None."
           }
         },
         "required": [
@@ -605,7 +604,8 @@
             "properties": {
               "reference_zarr_url": {
                 "title": "Reference Zarr Url",
-                "type": "string"
+                "type": "string",
+                "description": "zarr_url for the reference image"
               }
             },
             "required": [
