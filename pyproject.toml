@@ -42,6 +42,7 @@ dependencies = ["numpy<2",
                 "fractal-task-tools",
                 "ngio>=0.5.2",
                 "lxml",
+                "h5py==3.14.0"
                 ]
 
 # Optional dependencies (e.g. for `pip install -e ".[dev]"`, see
