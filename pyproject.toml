@@ -40,7 +40,8 @@ dependencies = ["numpy<2",
                 "pyarrow==20.0.0",
                 "contourpy<1.3.3",
                 "fractal-task-tools",
-                "ngio>=0.5.2"
+                "ngio>=0.5.2",
+                "lxml",
                 ]
 
 # Optional dependencies (e.g. for `pip install -e ".[dev]"`, see
