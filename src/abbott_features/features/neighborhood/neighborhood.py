@@ -1,10 +1,11 @@
 """Functions for computing neighborhood features."""
 
-from typing import Literal
+from typing import Literal, Union
 
 import polars as pl
 from ngio.common import Roi
 from ngio.images import Label
+from ngio.images._masked_image import MaskedLabel
 
 from abbott_features.features.constants import DensityParams
 from abbott_features.features.neighborhood import aggregation_functions
@@ -14,8 +15,8 @@ default_params = DensityParams()
 
 
 def get_neighborhood_features(
-    label_image: Label,
-    label_img_mask: Label,
+    label_image: Union[Label, MaskedLabel],
+    label_img_mask: Union[Label, MaskedLabel],
     roi: Roi,
     radius: tuple[float, ...] = default_params.radius,
     knn_distance: tuple[int, ...] = default_params.knn_distance,

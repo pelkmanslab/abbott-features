@@ -84,9 +84,11 @@ def get_distance_features(
 
     # Convert the label images to spatial_images
     if isinstance(label_image, MaskedLabel):
-        label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
+        label_numpy = label_image.get_roi_masked_as_numpy(int(roi.name)).astype(
+            np.uint16
+        )
     else:
-        label_numpy = label_image.get_roi(roi).astype("uint16")
+        label_numpy = label_image.get_roi(roi).astype(np.uint16)
 
     label_spatial_image = si.to_spatial_image(
         label_numpy,
@@ -95,9 +97,11 @@ def get_distance_features(
         name=label_image.meta.name,
     )
     if isinstance(label_image_to, MaskedLabel):
-        label_numpy_to = label_image_to.get_roi_masked(int(roi.name)).astype("uint16")
+        label_numpy_to = label_image_to.get_roi_masked_as_numpy(int(roi.name)).astype(
+            np.uint16
+        )
     else:
-        label_numpy_to = label_image_to.get_roi(roi).astype("uint16")
+        label_numpy_to = label_image_to.get_roi_as_numpy(roi).astype(np.uint16)
     label_spatial_image_to = si.to_spatial_image(
         label_numpy_to,
         dims=dims,

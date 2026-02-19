@@ -724,7 +724,12 @@ class NeighborhoodQueryObject:
         )
 
         if label_image_to is not None:
-            label_numpy_to = label_image_to.get_roi_as_numpy(roi).astype(np.uint16)
+            if isinstance(label_image_to, MaskedLabel):
+                label_numpy_to = label_image_to.get_roi_masked_as_numpy(
+                    int(roi.name)
+                ).astype(np.uint16)
+            else:
+                label_numpy_to = label_image_to.get_roi_as_numpy(roi).astype(np.uint16)
             mask = si.to_spatial_image(
                 label_numpy_to,
                 dims=axes_names,

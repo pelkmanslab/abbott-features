@@ -11,6 +11,7 @@ from ngio.images._masked_image import MaskedImage, MaskedLabel
 
 from abbott_features.features._base import get_si_features_df
 from abbott_features.features.constants import IntensityFeature
+from abbott_features.fractal_tasks.fractal_utils import pad_to_same_shape
 from abbott_features.intensity_normalization.models import (
     apply_t_decay_factor,
     apply_z_decay_models,
@@ -34,11 +35,20 @@ def get_intensity_features(
     channel_idx = images.get_channel_idx(channel_label=channel_label)
 
     if isinstance(label_image, MaskedLabel):
-        label_numpy = label_image.get_roi_masked(int(roi.name)).astype(np.uint16)
+        label_numpy = label_image.get_roi_masked_as_numpy(int(roi.name)).astype(
+            np.uint16
+        )
     else:
-        label_numpy = label_image.get_roi(roi).astype(np.uint16)
+        label_numpy = label_image.get_roi_as_numpy(roi).astype(np.uint16)
 
-    image_numpy = (images.get_roi(roi, c=channel_idx)).astype(np.uint16).squeeze()
+    if isinstance(images, MaskedImage):
+        image_numpy = images.get_roi_masked_as_numpy(label=int(roi.name), c=channel_idx)
+    else:
+        image_numpy = images.get_roi_as_numpy(roi, c=channel_idx)
+
+    # Pad to same shape if needed
+    if label_numpy.shape != image_numpy.shape:
+        label_numpy, image_numpy = pad_to_same_shape(label_numpy, image_numpy)
 
     label_spatial_image = si.to_spatial_image(
         label_numpy,
