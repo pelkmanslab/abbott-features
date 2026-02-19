@@ -30,7 +30,7 @@ pre-commit install
 ```
 to update manifest:
 ```
-fractal-manifest create --package abbott_features --fractal-server-2-13
+fractal-manifest create --package abbott_features
 ```
 
 ## Contributors
