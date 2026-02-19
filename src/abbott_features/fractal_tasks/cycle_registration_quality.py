@@ -127,6 +127,8 @@ def cycle_registration_quality(
 
         colocalization_roi_table = get_colocalization_features(
             label_image=label_image,
+            masking_label_name=masking_label_name,
+            masking_table_name=roi_table,
             channel0=channel_ref,
             channel1=channel_mov,
             level=str(level),
