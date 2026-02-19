@@ -15,6 +15,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+import dask.array as da
 import numpy as np
 import polars as pl
 from ngio import open_ome_zarr_container, open_ome_zarr_plate, open_ome_zarr_well
@@ -67,7 +68,7 @@ def measure_features(
     label_name: str,
     parent_label_names: Optional[list[str]] = None,
     reference_acquisition: Optional[int] = None,
-    level: str = "0",
+    level_path: str = "0",
     measure_label_features: bool = False,
     measure_intensity_features: IntensityFeaturesInputModel = (
         IntensityFeaturesInputModel()
@@ -97,7 +98,7 @@ def measure_features(
         reference_acquisition: The reference acquisition that contains the label
             image and table to perform the measurement on. If not provided, the
             task assumes that each acquisition has its own label image and table.
-        level: Level of the OME-Zarr label to copy from. Valid choices are
+        level_path: Level of the OME-Zarr label to copy from. Valid choices are
             "0", "1", etc. (depending on which levels are available in the
             OME-Zarr label).
         parent_label_names: List of parent label names relative to child `label_name`.
@@ -176,6 +177,8 @@ def measure_features(
     else:
         ref_zarr_url = zarr_url
 
+    logger.info(f"{ref_zarr_url=}")
+
     # Open the OME-Zarr container
     ome_zarr_container = open_ome_zarr_container(zarr_url)
 
@@ -184,11 +187,9 @@ def measure_features(
 
     # Get ROI table to loop over and check if it is a masking ROI table if use_masks
     if use_masks:
-        roi_table = ome_zarr_container_ref.get_table(
-            ROI_table_name, check_type="masking_roi_table"
-        )
+        roi_table = ome_zarr_container_ref.get_masking_roi_table(ROI_table_name)
     else:
-        roi_table = ome_zarr_container_ref.get_table(ROI_table_name)
+        roi_table = ome_zarr_container_ref.get_generic_roi_table(ROI_table_name)
 
     # Get the label image
     if use_masks:
@@ -196,29 +197,36 @@ def measure_features(
             label_name,
             masking_label_name=masking_label_name,
             masking_table_name=ROI_table_name,
-            path=level,
+            path=level_path,
         )
     else:
-        label_img = ome_zarr_container_ref.get_label(label_name, path=level)
+        label_img = ome_zarr_container_ref.get_label(label_name, path=level_path)
 
     # Check if the max label value exceeds uint16 range
     # Need to convert to uint16 as itk.LabelImageToShapeLabelMapFilter
     # does not support uint32
     label_da = label_img.get_array(mode="dask")
-    uint16_max = int(np.iinfo(np.uint16).max)
 
     # If dtype already fits in uint16, skip any computation
-    if not label_da.dtype == np.uint16 or not label_da.dtype == np.uint8:
-        max_label_value = int(label_da.max().compute())
-        if max_label_value > uint16_max:
+    if label_da.dtype not in (np.uint8, np.uint16):
+        max_label_value = int(da.max(label_da).compute())
+        if max_label_value > np.iinfo(np.uint16).max:
             raise ValueError(
-                f"Label image contains values ({max_label_value}) that exceed the "
-                f"maximum allowed value ({uint16_max}) for processing with "
-                "itk.LabelImageToShapeLabelMapFilter."
+                f"Label image contains values ({max_label_value}) that exceed "
+                f"the maximum allowed value ({np.iinfo(np.uint16).max}) "
+                "for processing with itk.LabelImageToShapeLabelMapFilter."
             )
+    del label_da
 
     # Get the images
-    images = ome_zarr_container.get_image(path=level)
+    if use_masks:
+        images = ome_zarr_container.get_masked_image(
+            path=level_path,
+            masking_label_name=masking_label_name,
+            masking_table_name=ROI_table_name,
+        )
+    else:
+        images = ome_zarr_container.get_image(path=level_path)
 
     # Get channels to include/exclude
     if measure_intensity_features.measure:
@@ -292,37 +300,43 @@ def measure_features(
 
         # Measure features per ROI
         if parent_label_names is not None:
-            if use_masks:
-                parent_label_images = [
-                    ome_zarr_container_ref.get_masked_label(
-                        label_name,
-                        masking_label_name=masking_label_name,
-                        masking_table_name=ROI_table_name,
-                        path=level,
-                    )
-                    for label_name in parent_label_names
-                ]
-            else:
-                parent_label_images = [
-                    ome_zarr_container_ref.get_label(label_name, path=level)
-                    for label_name in parent_label_names
-                ]
+            if zarr_url == ref_zarr_url:
+                if use_masks:
+                    parent_label_images = [
+                        ome_zarr_container_ref.get_masked_label(
+                            label_name,
+                            masking_label_name=masking_label_name,
+                            masking_table_name=ROI_table_name,
+                            path=level_path,
+                        )
+                        for label_name in parent_label_names
+                    ]
+                else:
+                    parent_label_images = [
+                        ome_zarr_container_ref.get_label(label_name, path=level_path)
+                        for label_name in parent_label_names
+                    ]
 
-            hierarchy_roi_table = get_parent_objects(
-                label_image=label_img,
-                parent_label_images=parent_label_images,
-                roi=roi,
-            )
-            tables_roi_list.append(hierarchy_roi_table)
+                hierarchy_roi_table = get_parent_objects(
+                    label_image=label_img,
+                    parent_label_images=parent_label_images,
+                    roi=roi,
+                )
+                tables_roi_list.append(hierarchy_roi_table)
+                logging.info(
+                    f"Measured parent label features for {label_name=} in {zarr_url=}"
+                )
 
         if measure_label_features:
             if zarr_url == ref_zarr_url:
-                logging.info(f"Measure label features for {label_name=} in {zarr_url=}")
                 label_roi_table = get_label_features(
                     label_image=label_img,
                     roi=roi,
                 )
                 tables_roi_list.append(label_roi_table)
+                logging.info(
+                    f"Measured label features for {label_name=} in {zarr_url=}"
+                )
 
         if measure_intensity_features.measure:
             if channel_labels:
@@ -339,6 +353,9 @@ def measure_features(
                     channel_roi_table_list.append(channel_roi_table)
                 intensity_roi_table = pl.concat(channel_roi_table_list, how="align")
                 tables_roi_list.append(intensity_roi_table)
+            logging.info(
+                f"Measured intensity features for {channel_labels=} in {zarr_url=}"
+            )
 
         if measure_distance_features is not None:
             if zarr_url == ref_zarr_url:
@@ -347,14 +364,14 @@ def measure_features(
                 )
                 if use_masks:
                     label_img_to = ome_zarr_container_ref.get_masked_label(
-                        measure_distance_features.label_name_to,
+                        label_name=measure_distance_features.label_name_to,
                         masking_label_name=masking_label_name,
                         masking_table_name=ROI_table_name,
-                        path=level,
+                        path=level_path,
                     )
                 else:
                     label_img_to = ome_zarr_container_ref.get_label(
-                        measure_distance_features.label_name_to, path=level
+                        measure_distance_features.label_name_to, path=level_path
                     )
                 distance_roi_table = get_distance_features(
                     label_image=label_img, label_image_to=label_img_to, roi=roi
@@ -375,7 +392,7 @@ def measure_features(
                         well_url=well_url,
                         channel_label=channel_0_lbl,
                         zarr_ending=zarr_ending,
-                        level=level,
+                        level=level_path,
                     )
                     channel_0 = {
                         "channel_label": channel_0_lbl,
@@ -386,7 +403,7 @@ def measure_features(
                         well_url=well_url,
                         channel_label=channel_1_lbl,
                         zarr_ending=zarr_ending,
-                        level=level,
+                        level=level_path,
                     )
                     channel_1 = {
                         "channel_label": channel_1_lbl,
@@ -398,9 +415,11 @@ def measure_features(
                     )
                     colocalization_roi_table = get_colocalization_features(
                         label_image=label_img,
+                        masking_label_name=masking_label_name if use_masks else None,
+                        masking_table_name=ROI_table_name if use_masks else None,
                         channel0=channel_0,
                         channel1=channel_1,
-                        level=level,
+                        level=level_path,
                         roi=roi,
                         kwargs_decay_corr=kwargs_decay_corr,
                     )
@@ -413,12 +432,27 @@ def measure_features(
 
         if measure_neighborhood_features.measure:
             if zarr_url == ref_zarr_url:
+                label_img_mask_name = measure_neighborhood_features.label_img_mask
+
                 logging.info(
-                    f"Measure neighborhood features for {label_name=} in {zarr_url=}"
+                    f"Measure neighborhood features for {label_name=} "
+                    f"with {label_img_mask_name=} in {zarr_url=}"
                 )
-                label_img_mask = ome_zarr_container_ref.get_label(
-                    measure_neighborhood_features.label_img_mask, path=level
-                )
+                if label_img_mask_name is not None:
+                    if use_masks:
+                        label_img_mask = ome_zarr_container_ref.get_masked_label(
+                            label_name=label_img_mask_name,
+                            masking_label_name=masking_label_name,
+                            masking_table_name=ROI_table_name,
+                            path=level_path,
+                        )
+                    else:
+                        label_img_mask = ome_zarr_container_ref.get_label(
+                            label_img_mask_name, path=level_path
+                        )
+                else:
+                    label_img_mask = None
+
                 neighborhood_table = get_neighborhood_features(
                     label_image=label_img,
                     label_img_mask=label_img_mask,
@@ -429,8 +463,7 @@ def measure_features(
         if tables_roi_list:
             tables_roi = pl.concat(tables_roi_list, how="align")
             tables_list.append(tables_roi)
-
-    logging.info(f"Finished feature measurement for {label_name=} and {zarr_url=}")
+            del tables_roi_list, tables_roi  # Free up memory after each ROI
 
     if tables_list:
         table_out = pl.concat(tables_list)
@@ -439,7 +472,7 @@ def measure_features(
         if output_table_name is None:
             output_table_name = label_name
 
-        feature_table = FeatureTableV1(table_out, reference_label="label")
+        feature_table = FeatureTableV1(table_out, reference_label=label_name)
         ome_zarr_container.add_table(
             name=output_table_name,
             table=feature_table,
@@ -448,6 +481,7 @@ def measure_features(
         )
 
         logging.info("Finished saving table")
+        logging.info(f"Finished feature measurement for {label_name=} and {zarr_url=}")
 
 
 if __name__ == "__main__":

@@ -3,10 +3,11 @@
 import logging
 from typing import Any, Optional
 
-from fractal_tasks_core.tasks.image_based_registration_hcs_init import (
+from pydantic import validate_call
+
+from abbott_features.fractal_tasks.image_based_registration_hcs_init import (
     image_based_registration_hcs_init,
 )
-from pydantic import validate_call
 
 logger = logging.getLogger(__name__)
 

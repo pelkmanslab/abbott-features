@@ -14,6 +14,7 @@ Zurich.
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 import zarr
 from ngio import open_ome_zarr_container
 
@@ -64,3 +65,30 @@ def get_well_from_zarrurl(zarr_url: str):
     row = Path(zarr_url).parent.parent.name
     column = Path(zarr_url).parent.name
     return f"{row}{column}"
+
+
+def pad_to_same_shape(np_array_1, np_array_2, np_array_3=None):
+    """Pad two or three numpy arrays to the same shape with zeros.
+
+    Args:
+        np_array_1 (np.array): First numpy array to pad.
+        np_array_2 (np.array): Second numpy array to pad.
+        np_array_3 (np.array, optional): Third numpy array to pad.
+
+    Returns:
+        np.array, np.array[, np.array]: Arrays padded to the same shape.
+    """
+    arrays = [np_array_1, np_array_2] + ([np_array_3] if np_array_3 is not None else [])
+
+    max_shape = arrays[0].shape
+    for arr in arrays[1:]:
+        max_shape = np.maximum(max_shape, arr.shape)
+
+    def pad_array(arr):
+        padded = np.zeros(max_shape, dtype=arr.dtype)
+        padded[: arr.shape[0], : arr.shape[1], : arr.shape[2]] = arr
+        return padded
+
+    padded_arrays = [pad_array(arr) for arr in arrays]
+
+    return tuple(padded_arrays)

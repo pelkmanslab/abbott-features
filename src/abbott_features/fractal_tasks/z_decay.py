@@ -23,8 +23,7 @@ import polars as pl
 import polars.selectors as cs
 import seaborn as sns
 from ngio import open_ome_zarr_plate
-from ngio.common import concatenate_image_tables_as
-from ngio.hcs._plate import _build_extras
+from ngio.hcs._plate import _build_extras, concatenate_image_tables_as
 from ngio.tables.v1 import FeatureTableV1
 from pydantic import validate_call
 from scipy import stats
@@ -129,7 +128,7 @@ def z_decay(
         images=ref_images.values(),
         extras=_build_extras(ref_images.keys()),
         table_cls=FeatureTableV1,
-        table_name=feature_table_name,
+        name=feature_table_name,
         index_key="index",
     )
 
@@ -189,7 +188,7 @@ def z_decay(
                 images=images.values(),
                 extras=_build_extras(images.keys()),
                 table_cls=FeatureTableV1,
-                table_name=feature_table_name,
+                name=feature_table_name,
                 index_key="index",
             )
 

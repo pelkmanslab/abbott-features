@@ -4,6 +4,7 @@ from functools import partial
 from typing import NamedTuple, Union
 
 import itk
+import numpy as np
 import polars as pl
 import spatial_image as si
 from ngio.common import Roi
@@ -78,14 +79,16 @@ def get_distance_features(
     its parent label (e.g. embryo mask).
     """
     # Load meta data
-    dims = label_image.axes_mapper.on_disk_axes_names
+    dims = label_image.axes
     scale = label_image.pixel_size.as_dict()
 
     # Convert the label images to spatial_images
     if isinstance(label_image, MaskedLabel):
-        label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
+        label_numpy = label_image.get_roi_masked_as_numpy(int(roi.name)).astype(
+            np.uint16
+        )
     else:
-        label_numpy = label_image.get_roi(roi).astype("uint16")
+        label_numpy = label_image.get_roi(roi).astype(np.uint16)
 
     label_spatial_image = si.to_spatial_image(
         label_numpy,
@@ -94,9 +97,11 @@ def get_distance_features(
         name=label_image.meta.name,
     )
     if isinstance(label_image_to, MaskedLabel):
-        label_numpy_to = label_image_to.get_roi_masked(int(roi.name)).astype("uint16")
+        label_numpy_to = label_image_to.get_roi_masked_as_numpy(int(roi.name)).astype(
+            np.uint16
+        )
     else:
-        label_numpy_to = label_image_to.get_roi(roi).astype("uint16")
+        label_numpy_to = label_image_to.get_roi_as_numpy(roi).astype(np.uint16)
     label_spatial_image_to = si.to_spatial_image(
         label_numpy_to,
         dims=dims,
@@ -111,7 +116,24 @@ def get_distance_features(
         index = ["object", "label"]
     else:
         index = "label"
-    mask = _get_mask(label_spatial_image_to, int(roi.name))
+
+    # TODO: needs to be better fixed to work with multiple labels in the same ROI
+    # (e.g. multiple embryos in the same ROI) if not MaskedLabel is used.
+    if isinstance(label_image_to, MaskedLabel):
+        mask = _get_mask(label_spatial_image_to, int(roi.name))
+    else:
+        # Get unique labels that are not 0
+        lbls_unique = np.unique(label_numpy)
+        lbls_unique = lbls_unique[lbls_unique != 0]
+        if len(lbls_unique) > 1:
+            raise ValueError(
+                f"Multiple labels found in label_image_to for ROI {roi.name}. "
+                "Please use a MaskedLabel or ensure that there is only one label "
+                f" in the ROI. Found labels: {lbls_unique}"
+            )
+        else:
+            lbl_id = lbls_unique[0]
+        mask = _get_mask(label_spatial_image_to, lbl_id)
 
     dfs = []
     for name, distance_function in distance_transforms.items():

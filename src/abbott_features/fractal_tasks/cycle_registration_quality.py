@@ -13,7 +13,6 @@
 import logging
 
 import polars as pl
-from fractal_tasks_core.tasks.io_models import InitArgsRegistration
 from ngio import open_ome_zarr_container
 from ngio.tables.v1 import FeatureTableV1
 from pydantic import validate_call
@@ -21,6 +20,7 @@ from pydantic import validate_call
 from abbott_features.features.colocalization import (
     get_colocalization_features,
 )
+from abbott_features.fractal_tasks.io_models import InitArgsRegistration
 
 logger = logging.getLogger(__name__)
 
@@ -76,14 +76,10 @@ def cycle_registration_quality(
 
     # Load channel to register by
     ome_zarr_ref = open_ome_zarr_container(reference_zarr_url)
-    channel_index_ref = ome_zarr_ref.image_meta._get_channel_idx_by_wavelength_id(
-        wavelength_id
-    )
+    channel_index_ref = ome_zarr_ref.get_channel_idx(wavelength_id=wavelength_id)
 
     ome_zarr_mov = open_ome_zarr_container(zarr_url)
-    channel_index_align = ome_zarr_mov.image_meta._get_channel_idx_by_wavelength_id(
-        wavelength_id
-    )
+    channel_index_align = ome_zarr_mov.get_channel_idx(wavelength_id=wavelength_id)
 
     # Read ROIs
     ref_roi_table = ome_zarr_ref.get_masking_roi_table(roi_table)
@@ -110,8 +106,8 @@ def cycle_registration_quality(
         ##############
         #  Calculate the registration score
         ##############
-        channel_ref_lbl = ome_zarr_ref.image_meta.channel_labels[channel_index_ref]
-        channel_mov_lbl = ome_zarr_mov.image_meta.channel_labels[channel_index_align]
+        channel_ref_lbl = ome_zarr_ref.channel_labels[channel_index_ref]
+        channel_mov_lbl = ome_zarr_mov.channel_labels[channel_index_align]
 
         channel_ref = {
             "channel_label": channel_ref_lbl,
@@ -131,6 +127,8 @@ def cycle_registration_quality(
 
         colocalization_roi_table = get_colocalization_features(
             label_image=label_image,
+            masking_label_name=masking_label_name,
+            masking_table_name=roi_table,
             channel0=channel_ref,
             channel1=channel_mov,
             level=str(level),
@@ -144,7 +142,7 @@ def cycle_registration_quality(
         table_out = pl.concat(colocalization_table)
 
         # Save results
-        feature_table = FeatureTableV1(table_out, reference_label="label")
+        feature_table = FeatureTableV1(table_out, reference_label=label_name)
         ome_zarr_mov.add_table(
             name=output_table_name,
             table=feature_table,

@@ -21,13 +21,12 @@ import pandas as pd
 import polars as pl
 import polars.selectors as cs
 import seaborn as sns
-from fractal_tasks_core.cellvoyager.metadata import parse_yokogawa_metadata
 from ngio import open_ome_zarr_plate
-from ngio.common import concatenate_image_tables_as
-from ngio.hcs._plate import _build_extras
+from ngio.hcs._plate import _build_extras, concatenate_image_tables_as
 from ngio.tables.v1 import FeatureTableV1, GenericTable
 from pydantic import validate_call
 
+from abbott_features.fractal_tasks.cellvoyager_metadata import parse_yokogawa_metadata
 from abbott_features.fractal_tasks.io_models import AcquisitionFolderInputModel
 from abbott_features.intensity_normalization.polars_selector import sel
 from abbott_features.intensity_normalization.polars_utils import (
@@ -192,7 +191,7 @@ def cellvoyager_time_decay(
         images=ref_images.values(),
         extras=_build_extras(ref_images.keys()),
         table_cls=FeatureTableV1,
-        table_name=feature_table_name,
+        name=feature_table_name,
         index_key="index",
     )
 
@@ -252,7 +251,7 @@ def cellvoyager_time_decay(
                 images=acq_images.values(),
                 extras=_build_extras(acq_images.keys()),
                 table_cls=FeatureTableV1,
-                table_name=feature_table_name,
+                name=feature_table_name,
                 index_key="index",
             )
 

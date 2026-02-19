@@ -64,6 +64,7 @@ class IntensityFeaturesInputModel(BaseModel):
     """Get intensity features to measure.
 
     Attributes:
+        measure: Whether to measure intensity features or not.
         channels_to_include: Channels to include in the measurement.
         channels_to_exclude: Channels to exclude from the measurement.
     """
@@ -159,3 +160,16 @@ class TimeDecayInputModel(BaseModel):
                 "`correction_factor` cannot be None if `table_name` is set."
             )
         return self
+
+
+class InitArgsRegistration(BaseModel):
+    """Registration init args.
+
+    Passed from `image_based_registration_hcs_init` to
+    `calculate_registration_image_based`.
+
+    Attributes:
+        reference_zarr_url: zarr_url for the reference image
+    """
+
+    reference_zarr_url: str

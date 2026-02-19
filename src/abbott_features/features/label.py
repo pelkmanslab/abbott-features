@@ -2,6 +2,7 @@
 
 from typing import TypeAlias, Union
 
+import numpy as np
 import polars as pl
 import spatial_image as si
 from ngio.common import Roi
@@ -25,13 +26,15 @@ def get_label_features(
     features: LabelFeatureLike = tuple(DefaultLabelFeature),
 ) -> pl.DataFrame:
     """Get label features from a label image."""
-    axes_names = label_image.axes_mapper.on_disk_axes_names
+    axes_names = label_image.axes
     pixel_sizes = label_image.pixel_size.as_dict()
 
     if isinstance(label_image, MaskedLabel):
-        label_numpy = label_image.get_roi_masked(int(roi.name)).astype("uint16")
+        label_numpy = label_image.get_roi_masked_as_numpy(int(roi.name)).astype(
+            np.uint16
+        )
     else:
-        label_numpy = label_image.get_roi(roi).astype("uint16")
+        label_numpy = label_image.get_roi_as_numpy(roi).astype(np.uint16)
 
     label_spatial_image = si.to_spatial_image(
         label_numpy,
