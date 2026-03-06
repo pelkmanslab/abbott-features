@@ -143,7 +143,7 @@ def measure_features(
     # Check if zarr_url ends on not just an integer
     zarr_ending = None
     if not Path(zarr_url).stem.isdigit():
-        zarr_ending = Path(zarr_url).stem.split("_")[-1]
+        zarr_ending = Path(zarr_url).stem.split("_", 1)[1]
 
     zarr_plate = Path(zarr_url).parent.parent.parent
     ome_zarr_plate = open_ome_zarr_plate(zarr_plate)
@@ -168,6 +168,7 @@ def measure_features(
                 ref_zarr_path = f"{reference_acquisition}_{zarr_ending}"
         else:
             ref_zarr_path = ref_zarr_paths[0]  # TODO: Come up with better fix
+
         if ref_zarr_path not in ref_zarr_paths:
             raise ValueError(
                 f"Path '{ref_zarr_path}' not found for acquisition "
