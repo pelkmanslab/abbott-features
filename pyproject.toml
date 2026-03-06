@@ -16,7 +16,7 @@ allow-direct-references = true # remove once ngio-dev is integrated in ngio
 # Project metadata (see https://peps.python.org/pep-0621)
 [project]
 name = "abbott-features"
-version = "0.1.4.dev4"
+dynamic = ["version"]
 description = "Package description."
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
