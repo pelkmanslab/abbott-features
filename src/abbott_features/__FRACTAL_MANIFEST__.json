@@ -333,6 +333,11 @@
             "type": "integer",
             "description": "The reference acquisition to be used for removing mitotic cells etc."
           },
+          "ROI_table_name": {
+            "title": "Roi Table Name",
+            "type": "string",
+            "description": "Name of the ROI table that contains the ROIs to be used for time decay model calculations. Should match the ROI table name used in the \"Measure Features\" task e.g. \"organoid_ROI_table\"."
+          },
           "acquisition_params": {
             "items": {
               "$ref": "#/$defs/AcquisitionFolderInputModel"
@@ -415,6 +420,7 @@
           "zarr_urls",
           "zarr_dir",
           "reference_acquisition",
+          "ROI_table_name",
           "acquisition_params"
         ],
         "type": "object",

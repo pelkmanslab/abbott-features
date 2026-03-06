@@ -16,7 +16,7 @@ allow-direct-references = true # remove once ngio-dev is integrated in ngio
 # Project metadata (see https://peps.python.org/pep-0621)
 [project]
 name = "abbott-features"
-dynamic = ["version"]
+version = "0.1.4.dev4"
 description = "Package description."
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
@@ -40,7 +40,7 @@ dependencies = ["numpy<2",
                 "pyarrow==20.0.0",
                 "contourpy<1.3.3",
                 "fractal-task-tools",
-                "ngio>=0.5.2",
+                "ngio==0.5.3",
                 "lxml",
                 "h5py==3.14.0"
                 ]

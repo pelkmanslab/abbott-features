@@ -65,6 +65,7 @@ HIERARCHY = cs.matches(r"^parent\W.+$")
 FULL_INDEX = (
     cs.matches("^well$")
     | cs.matches("^ROI$")
+    | cs.matches("^FieldIndex$")
     | cs.matches("^index$")
     | HIERARCHY
     | cs.matches("^object$")

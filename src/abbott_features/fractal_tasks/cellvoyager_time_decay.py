@@ -21,7 +21,7 @@ import pandas as pd
 import polars as pl
 import polars.selectors as cs
 import seaborn as sns
-from ngio import open_ome_zarr_plate
+from ngio import OmeZarrContainer, open_ome_zarr_plate
 from ngio.hcs._plate import _build_extras, concatenate_image_tables_as
 from ngio.tables.v1 import FeatureTableV1, GenericTable
 from pydantic import validate_call
@@ -41,6 +41,44 @@ from abbott_features.intensity_normalization.polars_utils import (
 logger = logging.getLogger(__name__)
 
 
+def _get_mapping_ROI_to_FOV(
+    images: dict[str, OmeZarrContainer],
+    ROI_table_name: str,
+    FOV_ROI_table_name: str = "FOV_ROI_table",
+) -> pl.DataFrame:
+    """Get mapping of ROI to FOV index based on the ROI tables."""
+    df_mapping = pl.DataFrame()
+
+    for path, ome_zarr in images.items():
+        row, column, _ = path.split("/")
+        well = f"{row}{column}"
+        roi_table = ome_zarr.get_table(ROI_table_name)
+        fov_roi_table = ome_zarr.get_table(FOV_ROI_table_name)
+        for roi in roi_table.rois():
+            roi_mapped = False
+            for fov_roi in fov_roi_table.rois():
+                if roi.intersection(fov_roi) is not None:
+                    # Assuming FOV_ROI_table has names like "FOV_0", "FOV_1", etc.
+                    field_index = fov_roi.name.split("_")[-1]
+                    df_mapping = df_mapping.vstack(
+                        pl.DataFrame(
+                            {
+                                "ROI": int(roi.name),
+                                "FieldIndex": int(field_index),
+                                "well": well,
+                            }
+                        )
+                    )
+                    roi_mapped = True
+                    break  # Assuming one ROI belongs to one FOV
+            if not roi_mapped:
+                logging.warning(
+                    f"ROI {roi.name} in {well=} could not be mapped to a FieldIndex."
+                )
+
+    return df_mapping
+
+
 @validate_call
 def cellvoyager_time_decay(
     *,
@@ -49,6 +87,7 @@ def cellvoyager_time_decay(
     zarr_dir: str,  # Not used in this task
     # Task-specific arguments:
     reference_acquisition: int,
+    ROI_table_name: str,
     acquisition_params: list[AcquisitionFolderInputModel],
     mrf_filename: str = "MeasurementDetail.mrf",
     mlf_filename: str = "MeasurementData.mlf",
@@ -76,6 +115,9 @@ def cellvoyager_time_decay(
             (standard argument for Fractal tasks, managed by Fractal server).
         reference_acquisition: The reference acquisition to be used for removing
             mitotic cells etc.
+        ROI_table_name: Name of the ROI table that contains the ROIs to be used for
+            time decay model calculations. Should match the ROI table name used in
+            the "Measure Features" task e.g. "organoid_ROI_table".
         acquisition_params: A list of `AcquisitionFolderInputModel` s, taking
             the acquisition int and path to the folder that contains the Cellvoyager
             image files and the MeasurementData & MeasurementDetail metadata files.
@@ -98,7 +140,7 @@ def cellvoyager_time_decay(
         time_decay_table_name: Name of the output time decay table.
         overwrite: Whether to overwrite an existing output time decay table.
     """
-    logging.info("Starting cellvoyager_time_decay_init task")
+    logging.info("Starting cellvoyager_time_decay task")
 
     zarr_fld = Path(zarr_urls[0]).parent.parent.parent.as_posix()
     logging.info(f"Zarr folder: {zarr_fld}")
@@ -108,6 +150,7 @@ def cellvoyager_time_decay(
     zarr_stem = Path(zarr_urls[0]).stem
     if not zarr_stem[-1].isdigit():
         zarr_ending = zarr_stem.split("_", 1)[1]
+    logging.info(f"Zarr ending: {zarr_ending}")
 
     tables_dir = Path(zarr_fld) / "tables"  # Directory to save plots and tables
     output_plots_dir = Path(tables_dir) / "__plots"
@@ -136,7 +179,7 @@ def cellvoyager_time_decay(
     df = df.select(
         [
             pl.col("well_id").alias("well"),
-            pl.col("FieldIndex").alias("ROI"),
+            pl.col("FieldIndex"),
             pl.col("Time").alias("acquisitionTime"),
             pl.col("acquisition"),
         ]
@@ -186,6 +229,13 @@ def cellvoyager_time_decay(
     if zarr_ending is not None:
         ref_images = {k: v for k, v in ref_images.items() if k.endswith(zarr_ending)}
 
+    # Get mapping of ROI to FOV index based on the ROI tables
+    # for the reference acquisition
+    df_mapping_ref = _get_mapping_ROI_to_FOV(
+        images=ref_images,
+        ROI_table_name=ROI_table_name,
+    )
+
     # Workaround if more than one path to image per acquisition exists
     df_features_pd_ref = concatenate_image_tables_as(
         images=ref_images.values(),
@@ -222,15 +272,8 @@ def cellvoyager_time_decay(
         pl.col("ROI").cast(pl.Int16),
     )
 
-    # Reference acquisition and path in well might not always match
-    ref_acq_path_in_well = (
-        df_features_ref.select("path_in_well").unique().to_series().to_list()[0]
-    )
-    if zarr_ending is not None:
-        ref_acq_path, _ = ref_acq_path_in_well.split("_")
-        ref_acq_path = int(ref_acq_path)
-    else:
-        ref_acq_path = int(ref_acq_path_in_well)
+    # Merge with mapping of ROI to FOV index
+    df_features_ref = df_features_ref.join(df_mapping_ref, on=["ROI", "well"])
 
     # Loop over acquisitions, extract features and fit time decay models
     results_combined = []
@@ -246,6 +289,13 @@ def cellvoyager_time_decay(
                 acq_images = {
                     k: v for k, v in acq_images.items() if k.endswith(zarr_ending)
                 }
+
+            # Get mapping of ROI to FOV index based on the ROI tables
+            # for the current acquisition
+            df_mapping_acq = _get_mapping_ROI_to_FOV(
+                images=acq_images,
+                ROI_table_name=ROI_table_name,
+            )
 
             df_features_acq_pd = concatenate_image_tables_as(
                 images=acq_images.values(),
@@ -280,6 +330,8 @@ def cellvoyager_time_decay(
                 ),
                 pl.col("ROI").cast(pl.Int16),
             )
+
+            df_features_acq = df_features_acq.join(df_mapping_acq, on=["ROI", "well"])
 
             df_features = pl.concat(
                 [df_features_ref, df_features_acq], how="diagonal_relaxed"
@@ -351,10 +403,44 @@ def cellvoyager_time_decay(
                 .to_list()
             )
             df_label_clean = df_label.filter(pl.col("label").is_in(labels_to_keep))
+
+            # Warn about ROIs removed due to spherical radius cutoff
+            all_rois = df_label_temp.select("ROI").unique()
+            kept_rois = (
+                df_label_clean.filter(pl.col("acquisition") == reference_acquisition)
+                .select("ROI")
+                .unique()
+            )
+            removed_rois = (
+                all_rois.filter(~pl.col("ROI").is_in(kept_rois.to_series()))
+                .to_series()
+                .to_list()
+            )
+            if removed_rois:
+                logging.warning(
+                    f"Acquisition {acq}: {len(removed_rois)} ROI(s) removed due to "
+                    f"{spherical_radius_cutoff=}: {removed_rois}. "
+                    "These ROIs will have no entry in the time decay table."
+                )
         else:
             df_label_clean = df_label.filter(
                 pl.col("EquivalentSphericalRadius").is_between(*spherical_radius_cutoff)
             )
+
+            # Warn about ROIs removed due to spherical radius cutoff
+            all_rois = df_label.select("ROI").unique()
+            kept_rois = df_label_clean.select("ROI").unique()
+            removed_rois = (
+                all_rois.filter(~pl.col("ROI").is_in(kept_rois.to_series()))
+                .to_series()
+                .to_list()
+            )
+            if removed_rois:
+                logging.warning(
+                    f"Reference acquisition {acq}: {len(removed_rois)} ROI(s) removed "
+                    f"due to {spherical_radius_cutoff=}: {removed_rois}. "
+                    "These ROIs will have no entry in the time decay table."
+                )
             # Save plot
             _, ax = plt.subplots(figsize=(6, 4))
             ax = sns.kdeplot(data=df_label.to_pandas(), x="EquivalentSphericalRadius")
@@ -375,7 +461,15 @@ def cellvoyager_time_decay(
             plt.close()
 
         # Merge cleaned label data with intensity and alignment data
-        index = ["ROI", "object", "label", "well", "channel", "acquisition"]
+        index = [
+            "ROI",
+            "FieldIndex",
+            "object",
+            "label",
+            "well",
+            "channel",
+            "acquisition",
+        ]
         obj_index = ["ROI", "object", "label", "well"]
 
         df_clean = (
@@ -407,8 +501,8 @@ def cellvoyager_time_decay(
                     [
                         pl.col("acquisition").cast(pl.UInt16),
                     ]
-                ).select(["well", "ROI", "acquisition", "timeDeltaMinutes"]),
-                on=["well", "ROI", "acquisition"],
+                ).select(["well", "FieldIndex", "acquisition", "timeDeltaMinutes"]),
+                on=["well", "FieldIndex", "acquisition"],
             )
         )
 

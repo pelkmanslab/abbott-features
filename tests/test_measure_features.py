@@ -98,6 +98,7 @@ def test_decays(test_data_dir):
         zarr_dir=test_data_dir,
         acquisition_params=acquisition_params,
         reference_acquisition=reference_acquisition,
+        ROI_table_name="emb_ROI_table_2_linked",
         spherical_radius_cutoff=(2, 8),
     )
 
