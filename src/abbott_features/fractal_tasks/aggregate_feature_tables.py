@@ -11,7 +11,6 @@ from pydantic import validate_call
 
 from abbott_features.intensity_normalization.polars_utils import (
     to_tall,
-    unnest_all_structs,
 )
 
 logger = logging.getLogger("aggregate_feature_tables")
@@ -75,8 +74,6 @@ def concatenation_function(
     )
 
     df_features_tall = to_tall(df_features, index_key="index")
-
-    df_features_tall = unnest_all_structs(df_features_tall)
 
     return df_features_tall
 
@@ -145,6 +142,7 @@ def aggregate_feature_tables(
     ome_zarr_plate.add_table(
         name=output_table_name,
         table=concatenated_feature_table_out,
+        backend="parquet",
         overwrite=overwrite,
     )
 

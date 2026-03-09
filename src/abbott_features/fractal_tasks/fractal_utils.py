@@ -188,8 +188,8 @@ def remap_label_ids(table: pl.DataFrame, new_to_old: dict[int, int]) -> pl.DataF
             "__original_label__": list(new_to_old.values()),
         },
         schema={
-            _LABEL_ID_COL: pl.UInt16,
-            "__original_label__": pl.UInt64,
+            _LABEL_ID_COL: pl.Int16,
+            "__original_label__": pl.Int32,
         },
     )
 

@@ -466,7 +466,7 @@ def measure_features(
             del tables_roi_list, tables_roi  # Free up memory after each ROI
 
     if tables_list:
-        table_out = pl.concat(tables_list)
+        table_out = pl.concat(tables_list, how="vertical_relaxed")
 
         # Save the output table
         if output_table_name is None:

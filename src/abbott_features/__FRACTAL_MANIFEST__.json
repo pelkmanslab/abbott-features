@@ -690,8 +690,8 @@
       "category": "Measurement",
       "modality": "HCS",
       "tags": [
-        "Feature Table",
-        "3D"
+        "3D",
+        "Feature Table"
       ],
       "docs_info": "### Purpose\n- Calculates **morphology**, **intensity**, **distance**, and **colocalization features** for objects in a 3D label image.\n- Supports **2D (not tested) and 3D measurements** across multiple regions of interest (ROIs).\n\n### Outputs\n- A  **feature table** saved in the OME-Zarr structure with .parquet backend.\n  - Morphology features \n  - Intensity features (e.g., mean, max, min intensity per object).\n  - Distance features (e.g., densities and number of neighbours).\n- Updated ROI metadata with border and well location information.\n\n### Limitations\n- Does not support measurements for label images that do not have the same resolution as the intensity images.\n- Tables are saved per OME-Zarr container. **Aggregate Feature Tables** task downstream of **Measure Features** \n  task concatenates the tables into a single table.",
       "type": "non_parallel",
@@ -709,7 +709,7 @@
             },
             "title": "Zarr Urls",
             "type": "array",
-            "description": "Missing description"
+            "description": "URLs to the OME-Zarr container"
           },
           "zarr_dir": {
             "title": "Zarr Dir",
