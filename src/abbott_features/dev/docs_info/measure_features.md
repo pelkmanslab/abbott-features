@@ -11,3 +11,5 @@
 
 ### Limitations
 - Does not support measurements for label images that do not have the same resolution as the intensity images.
+- Tables are saved per OME-Zarr container. **Aggregate Feature Tables** task downstream of **Measure Features** 
+  task concatenates the tables into a single table.

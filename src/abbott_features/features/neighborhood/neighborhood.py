@@ -1,8 +1,9 @@
 """Functions for computing neighborhood features."""
 
-from typing import Literal, Union
+from typing import Literal, Optional, Union
 
 import polars as pl
+import spatial_image as si
 from ngio.common import Roi
 from ngio.images import Label
 from ngio.images._masked_image import MaskedLabel
@@ -10,14 +11,15 @@ from ngio.images._masked_image import MaskedLabel
 from abbott_features.features.constants import DensityParams
 from abbott_features.features.neighborhood import aggregation_functions
 from abbott_features.features.neighborhood.neighborhoods import NeighborhoodQueryObject
+from abbott_features.fractal_tasks.fractal_utils import ensure_uint16, remap_label_ids
 
 default_params = DensityParams()
 
 
 def get_neighborhood_features(
-    label_image: Union[Label, MaskedLabel],
-    label_img_mask: Union[Label, MaskedLabel],
     roi: Roi,
+    label_image: Union[Label, MaskedLabel],
+    label_img_mask: Optional[Union[Label, MaskedLabel]] = None,
     radius: tuple[float, ...] = default_params.radius,
     knn_distance: tuple[int, ...] = default_params.knn_distance,
     distance_to_closest_neighbor: bool = default_params.distance_to_closest_neighbor,
@@ -27,7 +29,45 @@ def get_neighborhood_features(
     adjacency_aggfuncs: tuple[int, ...] = default_params.adjacency_aggfuncs,
     index_columns: tuple[Literal["label", "label_image"], ...] = ("label",),
 ) -> pl.DataFrame:
-    nq = NeighborhoodQueryObject.from_labelimage(label_image, label_img_mask, roi)
+    axes_names = label_image.axes
+    pixel_sizes = label_image.pixel_size.as_dict()
+    scale = label_image.pixel_size.zyx
+
+    # Get the label image
+    if isinstance(label_image, MaskedLabel):
+        label_numpy = label_image.get_roi_masked_as_numpy(int(roi.name))
+    else:
+        label_numpy = label_image.get_roi_as_numpy(roi)
+
+    # Relabel to uint16 if needed (itk requires values <= uint16 max)
+    label_numpy, new_to_old = ensure_uint16(label_numpy)
+
+    lbl = si.to_spatial_image(
+        label_numpy,
+        dims=axes_names,
+        scale=pixel_sizes,
+    )
+
+    # Get the masking label image
+    if label_img_mask is not None:
+        if isinstance(label_img_mask, MaskedLabel):
+            label_numpy_to = label_img_mask.get_roi_masked_as_numpy(int(roi.name))
+        else:
+            label_numpy_to = label_img_mask.get_roi_as_numpy(roi)
+
+        # Relabel to uint16 if needed (itk requires values <= uint16 max)
+        label_numpy_to, _ = ensure_uint16(label_numpy_to)
+
+        mask = si.to_spatial_image(
+            label_numpy_to,
+            dims=axes_names,
+            scale=pixel_sizes,
+            name=label_img_mask.meta.name,
+        )
+    else:
+        mask = None
+
+    nq = NeighborhoodQueryObject.from_labelimage(lbl=lbl, mask=mask, scale=scale)
     results = []
     distance_aggfuncs = [getattr(aggregation_functions, f) for f in distance_aggfuncs]
     adjacency_aggfuncs = [getattr(aggregation_functions, f) for f in adjacency_aggfuncs]
@@ -74,6 +114,10 @@ def get_neighborhood_features(
 
     if "label_image" in index_columns:
         df = df.with_columns(pl.lit(label_image.meta.name).alias("label_image"))
+
+    # If relabeling was performed, restore original label IDs in the feature table.
+    if new_to_old is not None:
+        df = remap_label_ids(df, new_to_old)
 
     # add ROI column
     df = df.with_columns(pl.lit(roi.name).alias("ROI"))

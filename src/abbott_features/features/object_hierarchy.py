@@ -30,26 +30,6 @@ def get_parent_objects(
     else:
         label_numpy = label_image.get_roi_as_numpy(roi)
 
-    # results = {}
-    # props = regionprops(label_numpy, cache=False)
-    # labels = [prop.label for prop in props]
-    # for lbl_other in parent_label_images:
-    #     if isinstance(lbl_other, MaskedLabel):
-    #         lbl_other_numpy = lbl_other.get_roi_masked_as_numpy(int(roi.name))
-    #     else:
-    #         lbl_other_numpy = lbl_other.get_roi_as_numpy(roi)
-
-    #     # Pad to same shape if needed
-    #     if label_numpy.shape != lbl_other_numpy.shape:
-    #         label_numpy, lbl_other_numpy = pad_to_same_shape(label_numpy,
-    #                                                          lbl_other_numpy)
-
-    #     props = regionprops(
-    #         label_numpy, lbl_other_numpy,
-    #         cache=False, extra_properties=(parent_label,)
-    #     )
-    #     results[lbl_other.meta.name] = [prop.parent_label for prop in props]
-
     results = {}
     labels = None
 

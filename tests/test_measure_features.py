@@ -3,10 +3,13 @@ from pathlib import Path
 
 import pytest
 from devtools import debug
-from ngio import open_ome_zarr_container
+from ngio import open_ome_zarr_container, open_ome_zarr_plate
 from ngio.utils._errors import NgioValueError
 from pydantic import ValidationError
 
+from abbott_features.fractal_tasks.aggregate_feature_tables import (
+    aggregate_feature_tables,
+)
 from abbott_features.fractal_tasks.cellvoyager_time_decay import cellvoyager_time_decay
 from abbott_features.fractal_tasks.io_models import (
     AcquisitionFolderInputModel,
@@ -209,6 +212,19 @@ def test_measure_features(test_data_dir):
     ome_zarr_container = open_ome_zarr_container(zarr_urls[0])
     ome_zarr_container.get_feature_table("nuclei")
 
+    # Aggregate feature tables
+    aggregate_feature_tables(
+        zarr_urls=zarr_urls,
+        zarr_dir=test_data_dir,
+        input_table_name="nuclei",
+        reference_label="nuclei",
+        overwrite=True,
+    )
+
+    # Verify that the table was added to the OME-Zarr plate
+    ome_plate = open_ome_zarr_plate(test_data_dir)
+    ome_plate.get_feature_table("nuclei_aggregated")
+
     # Test validation of measure_neighborhood_features if measure is False
     with pytest.raises(ValidationError):
         NeighborhoodFeaturesInputModel(measure=False, label_img_mask="emb_linked")
@@ -245,3 +261,60 @@ def test_measure_features(test_data_dir):
             measure_label_features=True,
             overwrite=False,
         )
+
+
+def test_measure_features_uint32(test_data_dir):
+    """Base test for measure features with uint32 label image."""
+    level = "2"
+    reference_acquisition = 2
+    zarr_url = f"{test_data_dir}/B/03/0"
+
+    ome_zarr = open_ome_zarr_container(zarr_url)
+
+    label = ome_zarr.get_label("nuclei")
+    label_da = label.get_as_dask()
+    derived_label = ome_zarr.derive_label(name="nuclei_uint32", ref_image=label)
+
+    # Relabel to uint32 with an offset to ensure label IDs > uint16 max
+    offset = 70000
+    label_da_uint32 = label_da + offset
+    derived_label.set_array(label_da_uint32)
+    derived_label.consolidate()
+
+    measure_intensity_features = IntensityFeaturesInputModel(
+        measure=True,
+        channels_to_exclude=[
+            ChannelInputModel(label="DAPI_2"),
+        ],
+    )
+    measure_distance_features = DistanceFeaturesInputModel(label_name_to="emb_linked")
+
+    measure_colocalization_features = ColocalizationFeaturesInputModel(
+        channel_pair=[
+            ChannelPairInputModel(
+                channel0=ChannelInputModel(label="DAPI_2"),
+                channel1=ChannelInputModel(label="DAPI_3"),
+            )
+        ]
+    )
+
+    measure_neighborhood_features = NeighborhoodFeaturesInputModel(
+        measure=True, label_img_mask="emb_linked"
+    )
+
+    measure_features(
+        zarr_url=zarr_url,
+        label_name="nuclei_uint32",
+        parent_label_names=["emb_linked"],
+        reference_acquisition=reference_acquisition,
+        level_path=level,
+        use_masks=True,
+        masking_label_name="emb_linked",
+        ROI_table_name="emb_ROI_table_2_linked",
+        measure_label_features=True,
+        measure_intensity_features=measure_intensity_features,
+        measure_distance_features=measure_distance_features,
+        measure_colocalization_features=measure_colocalization_features,
+        measure_neighborhood_features=measure_neighborhood_features,
+        overwrite=True,
+    )

@@ -24,7 +24,11 @@ from abbott_features.features.constants import (
     ColocalizationFeature,
     DefaultColocalizationFeature,
 )
-from abbott_features.fractal_tasks.fractal_utils import pad_to_same_shape
+from abbott_features.fractal_tasks.fractal_utils import (
+    ensure_uint16,
+    pad_to_same_shape,
+    remap_label_ids,
+)
 from abbott_features.intensity_normalization.models import (
     apply_t_decay_factor,
     apply_z_decay_models,
@@ -117,9 +121,12 @@ def get_colocalization_features(
 
     # Get the label image
     if isinstance(label_image, MaskedLabel):
-        lbls = label_image.get_roi_masked_as_numpy(int(roi.name)).astype(np.uint16)
+        lbls = label_image.get_roi_masked_as_numpy(int(roi.name))
     else:
-        lbls = label_image.get_roi_as_numpy(roi).astype(np.uint16)
+        lbls = label_image.get_roi_as_numpy(roi)
+
+    # Relabel to uint16 if needed (itk requires values <= uint16 max)
+    lbls, new_to_old = ensure_uint16(lbls)
 
     # Get the channel images
     if isinstance(label_image, MaskedLabel):
@@ -310,6 +317,10 @@ def get_colocalization_features(
 
     meta["index_columns"] = index_columns_out
     meta["resource_columns"] = resource_columns_out
+
+    # If relabeling was performed, restore original label IDs in the feature table.
+    if new_to_old is not None:
+        df = remap_label_ids(df, new_to_old)
 
     # add ROI column
     df = df.with_columns(pl.lit(roi.name).alias("ROI"))

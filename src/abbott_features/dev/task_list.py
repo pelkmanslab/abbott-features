@@ -79,4 +79,25 @@ TASK_LIST = [
         tags=["Multiplexing", "3D"],
         docs_info="file:docs_info/calculate_registration_quality.md",
     ),
+    NonParallelTask(
+        name="Aggregate Feature Tables",
+        executable="fractal_tasks/aggregate_feature_tables.py",
+        meta={"cpus_per_task": 4, "mem": 16000},
+        category="Measurement",
+        modality="HCS",
+        tags=["Feature Table", "3D"],
+        docs_info="file:docs_info/measure_features.md",
+    ),
+    NonParallelTask(
+        name="Aggregate Feature Tables",
+        executable="fractal_tasks/aggregate_feature_tables.py",
+        meta={"cpus_per_task": 4, "mem": 16000},
+        category="Measurement",
+        tags=[
+            "3D",
+            "Feature Table",
+        ],
+        modality="HCS",
+        docs_info="file:docs_info/z_decay.md",
+    ),
 ]

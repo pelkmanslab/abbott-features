@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
+import polars as pl
 import zarr
 from ngio import open_ome_zarr_container
 
@@ -92,3 +93,114 @@ def pad_to_same_shape(np_array_1, np_array_2, np_array_3=None):
     padded_arrays = [pad_array(arr) for arr in arrays]
 
     return tuple(padded_arrays)
+
+
+def ensure_uint16(
+    label_array: np.ndarray,
+) -> tuple[np.ndarray, dict[int, int] | None]:
+    """Return *label_array* as uint16, relabeling only when necessary.
+
+    If the array dtype is already uint8 or uint16 **and** the maximum value
+    fits in uint16, the original array is returned unchanged and the second
+    element of the tuple is ``None`` (no remapping needed).
+
+    Otherwise the array is compacted via :func:`_relabel_to_uint16` and the
+    reverse mapping is returned so callers can restore original IDs.
+
+    Args:
+        label_array: Integer-typed numpy array of label IDs.
+
+    Returns:
+        (array, new_to_old) where *new_to_old* is ``None`` when no relabeling
+        was performed.
+    """
+    if label_array.dtype in (np.uint8, np.uint16):
+        return label_array, None
+    max_val = int(label_array.max()) if label_array.size > 0 else 0
+    if max_val <= np.iinfo(np.uint16).max:
+        return label_array.astype(np.uint16), None
+    relabeled, new_to_old = _relabel_to_uint16(label_array)
+    return relabeled, new_to_old
+
+
+def _relabel_to_uint16(
+    label_array: np.ndarray,
+) -> tuple[np.ndarray, dict[int, int]]:
+    """Relabel a label array so that all IDs fit in uint16.
+
+    Background (0) is preserved as 0.  All other unique values are mapped to a
+    compact sequence starting at 1.
+
+    Args:
+        label_array: An integer-typed numpy array with arbitrary label values.
+
+    Returns:
+        relabeled: A uint16 numpy array with compacted label IDs.
+        new_to_old: Mapping from new (uint16) label ID → original label ID,
+            enabling feature tables to be remapped back to original IDs.
+    """
+    unique_labels = np.unique(label_array)
+    # Exclude background
+    foreground = unique_labels[unique_labels != 0]
+
+    if len(foreground) > np.iinfo(np.uint16).max:
+        raise ValueError(
+            f"ROI contains {len(foreground)} unique label IDs, which exceeds "
+            f"the uint16 maximum of {np.iinfo(np.uint16).max}. "
+            "Cannot relabel to uint16."
+        )
+
+    # Build old→new and new→old lookup tables
+    # new IDs start at 1
+    new_ids = np.arange(1, len(foreground) + 1, dtype=np.uint16)
+    old_to_new = dict(zip(foreground.tolist(), new_ids.tolist()))
+    new_to_old = dict(zip(new_ids.tolist(), foreground.tolist()))
+
+    # Vectorised relabel via a lookup table (fast for dense and sparse arrays)
+    max_old = int(foreground.max()) if len(foreground) > 0 else 0
+    lut = np.zeros(max_old + 1, dtype=np.uint16)
+    for old, new in old_to_new.items():
+        lut[old] = new
+
+    # Values beyond lut length → background (they don't exist, but be safe)
+    clipped = np.clip(label_array, 0, max_old).astype(np.intp)
+    relabeled = lut[clipped]
+    # Restore true background for any values that were clipped incorrectly
+    relabeled[label_array == 0] = 0
+
+    return relabeled, new_to_old
+
+
+def remap_label_ids(table: pl.DataFrame, new_to_old: dict[int, int]) -> pl.DataFrame:
+    _LABEL_ID_COL = "label"
+    if _LABEL_ID_COL not in table.columns:
+        raise ValueError(
+            f"Relabeling to original label IDs failed: "
+            f"Expected column '{_LABEL_ID_COL}' not found in table."
+        )
+
+    original_col_order = table.columns
+    label_col_idx = original_col_order.index(_LABEL_ID_COL)
+
+    mapping_df = pl.DataFrame(
+        {
+            _LABEL_ID_COL: list(new_to_old.keys()),
+            "__original_label__": list(new_to_old.values()),
+        },
+        schema={
+            _LABEL_ID_COL: pl.UInt16,
+            "__original_label__": pl.UInt64,
+        },
+    )
+
+    result = (
+        table.join(mapping_df, on=_LABEL_ID_COL, how="left")
+        .drop(_LABEL_ID_COL)
+        .rename({"__original_label__": _LABEL_ID_COL})
+    )
+
+    # Restore original column order — join moves label to the end
+    cols = result.columns
+    cols.remove(_LABEL_ID_COL)
+    cols.insert(label_col_idx, _LABEL_ID_COL)
+    return result.select(cols)
