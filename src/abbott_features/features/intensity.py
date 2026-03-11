@@ -12,7 +12,6 @@ from abbott_features.features._base import get_si_features_df
 from abbott_features.features.constants import IntensityFeature
 from abbott_features.fractal_tasks.fractal_utils import (
     ensure_uint16,
-    pad_to_same_shape,
     remap_label_ids,
 )
 from abbott_features.intensity_normalization.models import (
@@ -45,14 +44,7 @@ def get_intensity_features(
     # Relabel to uint16 if needed (itk requires values <= uint16 max)
     label_numpy, new_to_old = ensure_uint16(label_numpy)
 
-    if isinstance(images, MaskedImage):
-        image_numpy = images.get_roi_masked_as_numpy(label=int(roi.name), c=channel_idx)
-    else:
-        image_numpy = images.get_roi_as_numpy(roi, c=channel_idx)
-
-    # Pad to same shape if needed
-    if label_numpy.shape != image_numpy.shape:
-        label_numpy, image_numpy = pad_to_same_shape(label_numpy, image_numpy)
+    image_numpy = images.get_roi_as_numpy(roi, c=channel_idx)
 
     label_spatial_image = si.to_spatial_image(
         label_numpy,

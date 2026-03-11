@@ -26,7 +26,6 @@ from abbott_features.features.constants import (
 )
 from abbott_features.fractal_tasks.fractal_utils import (
     ensure_uint16,
-    pad_to_same_shape,
     remap_label_ids,
 )
 from abbott_features.intensity_normalization.models import (
@@ -129,52 +128,21 @@ def get_colocalization_features(
     lbls, new_to_old = ensure_uint16(lbls)
 
     # Get the channel images
-    if isinstance(label_image, MaskedLabel):
-        channel_0_images = open_ome_zarr_container(
-            channel0["channel_zarr_url"]
-        ).get_masked_image(
-            path=level,
-            masking_label_name=masking_label_name,
-            masking_table_name=masking_table_name,
-        )
-        channel_0_idx = channel_0_images.get_channel_idx(
-            channel_label=channel0["channel_label"]
-        )
+    channel_0_images = open_ome_zarr_container(channel0["channel_zarr_url"]).get_image(
+        path=level
+    )
+    channel_0_idx = channel_0_images.get_channel_idx(
+        channel_label=channel0["channel_label"]
+    )
+    img0 = channel_0_images.get_roi_as_numpy(roi, c=channel_0_idx)
 
-        img0 = channel_0_images.get_roi_masked_as_numpy(int(roi.name), c=channel_0_idx)
-    else:
-        channel_0_images = open_ome_zarr_container(
-            channel0["channel_zarr_url"]
-        ).get_image(path=level)
-        channel_0_idx = channel_0_images.get_channel_idx(
-            channel_label=channel0["channel_label"]
-        )
-        img0 = channel_0_images.get_roi_as_numpy(roi, c=channel_0_idx)
-
-    if isinstance(label_image, MaskedLabel):
-        channel_1_images = open_ome_zarr_container(
-            channel1["channel_zarr_url"]
-        ).get_masked_image(
-            masking_label_name=masking_label_name,
-            masking_table_name=masking_table_name,
-            path=level,
-        )
-        channel_1_idx = channel_1_images.get_channel_idx(
-            channel_label=channel1["channel_label"]
-        )
-        img1 = channel_1_images.get_roi_masked_as_numpy(int(roi.name), c=channel_1_idx)
-    else:
-        channel_1_images = open_ome_zarr_container(
-            channel1["channel_zarr_url"]
-        ).get_image(path=level)
-        channel_1_idx = channel_1_images.get_channel_idx(
-            channel_label=channel1["channel_label"]
-        )
-        img1 = channel_1_images.get_roi_as_numpy(roi, c=channel_1_idx)
-
-    # Pad to same shape if needed
-    if lbls.shape != img0.shape or lbls.shape != img1.shape or img0.shape != img1.shape:
-        lbls, img0, img1 = pad_to_same_shape(lbls, img0, img1)
+    channel_1_images = open_ome_zarr_container(channel1["channel_zarr_url"]).get_image(
+        path=level
+    )
+    channel_1_idx = channel_1_images.get_channel_idx(
+        channel_label=channel1["channel_label"]
+    )
+    img1 = channel_1_images.get_roi_as_numpy(roi, c=channel_1_idx)
 
     lbls_si = si.to_spatial_image(
         lbls,

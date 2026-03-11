@@ -202,31 +202,8 @@ def measure_features(
     else:
         label_img = ome_zarr_container_ref.get_label(label_name, path=level_path)
 
-    # Check if the max label value exceeds uint16 range
-    # Need to convert to uint16 as itk.LabelImageToShapeLabelMapFilter
-    # does not support uint32
-    # label_da = label_img.get_array(mode="dask")
-
-    # # If dtype already fits in uint16, skip any computation
-    # if label_da.dtype not in (np.uint8, np.uint16):
-    #     max_label_value = int(da.max(label_da).compute())
-    #     if max_label_value > np.iinfo(np.uint16).max:
-    #         raise ValueError(
-    #             f"Label image contains values ({max_label_value}) that exceed "
-    #             f"the maximum allowed value ({np.iinfo(np.uint16).max}) "
-    #             "for processing with itk.LabelImageToShapeLabelMapFilter."
-    #         )
-    # del label_da
-
     # Get the images
-    if use_masks:
-        images = ome_zarr_container.get_masked_image(
-            path=level_path,
-            masking_label_name=masking_label_name,
-            masking_table_name=ROI_table_name,
-        )
-    else:
-        images = ome_zarr_container.get_image(path=level_path)
+    images = ome_zarr_container.get_image(path=level_path)
 
     # Get channels to include/exclude
     if measure_intensity_features.measure:
