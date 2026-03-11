@@ -159,6 +159,11 @@ def unnest_structs(
     ).unnest(cols)
 
 
+def unnest_all_structs(df: pl.DataFrame, sep: str = ".") -> pl.DataFrame:
+    cols = [col for col, dtype in zip(df.columns, df.dtypes) if dtype == pl.Struct]
+    return unnest_structs(df, cols, sep=sep)
+
+
 def get_well_name(full_path: Path, ome_zarr_fld: Path) -> str:
     """Extracts the well name (e.g., 'B03') from a full OME-Zarr path.
 

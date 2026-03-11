@@ -2,7 +2,6 @@
 
 from typing import TypeAlias, Union
 
-import numpy as np
 import polars as pl
 import spatial_image as si
 from ngio.common import Roi
@@ -16,6 +15,7 @@ from abbott_features.features.constants import (
     PositionAndOrientationLabelFeature,
 )
 from abbott_features.features.types import LabelImage
+from abbott_features.fractal_tasks.fractal_utils import ensure_uint16, remap_label_ids
 
 LabelFeatureLike: TypeAlias = tuple[LabelFeature, ...] | tuple[str, ...]
 
@@ -30,11 +30,12 @@ def get_label_features(
     pixel_sizes = label_image.pixel_size.as_dict()
 
     if isinstance(label_image, MaskedLabel):
-        label_numpy = label_image.get_roi_masked_as_numpy(int(roi.name)).astype(
-            np.uint16
-        )
+        label_numpy = label_image.get_roi_masked_as_numpy(int(roi.name))
     else:
-        label_numpy = label_image.get_roi_as_numpy(roi).astype(np.uint16)
+        label_numpy = label_image.get_roi_as_numpy(roi)
+
+    # Relabel to uint16 if needed (itk requires values <= uint16 max)
+    label_numpy, new_to_old = ensure_uint16(label_numpy)
 
     label_spatial_image = si.to_spatial_image(
         label_numpy,
@@ -46,6 +47,11 @@ def get_label_features(
     feature_table = get_si_features_df(
         label_spatial_image, props=valid_label_features, named_features=True
     )
+
+    # If relabeling was performed, restore original label IDs in the feature table.
+    if new_to_old is not None:
+        feature_table = remap_label_ids(feature_table, new_to_old)
+
     # add ROI column
     feature_table = feature_table.with_columns(pl.lit(roi.name).alias("ROI"))
     return feature_table

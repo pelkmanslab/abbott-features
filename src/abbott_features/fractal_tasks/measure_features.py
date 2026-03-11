@@ -15,8 +15,6 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-import dask.array as da
-import numpy as np
 import polars as pl
 from ngio import open_ome_zarr_container, open_ome_zarr_plate, open_ome_zarr_well
 from ngio.tables.v1 import FeatureTableV1
@@ -143,7 +141,8 @@ def measure_features(
     # Check if zarr_url ends on not just an integer
     zarr_ending = None
     if not Path(zarr_url).stem.isdigit():
-        zarr_ending = Path(zarr_url).stem.split("_", 1)[1]
+        if "_" in Path(zarr_url).stem:
+            zarr_ending = Path(zarr_url).stem.split("_", 1)[1]
 
     zarr_plate = Path(zarr_url).parent.parent.parent
     ome_zarr_plate = open_ome_zarr_plate(zarr_plate)
@@ -203,31 +202,8 @@ def measure_features(
     else:
         label_img = ome_zarr_container_ref.get_label(label_name, path=level_path)
 
-    # Check if the max label value exceeds uint16 range
-    # Need to convert to uint16 as itk.LabelImageToShapeLabelMapFilter
-    # does not support uint32
-    label_da = label_img.get_array(mode="dask")
-
-    # If dtype already fits in uint16, skip any computation
-    if label_da.dtype not in (np.uint8, np.uint16):
-        max_label_value = int(da.max(label_da).compute())
-        if max_label_value > np.iinfo(np.uint16).max:
-            raise ValueError(
-                f"Label image contains values ({max_label_value}) that exceed "
-                f"the maximum allowed value ({np.iinfo(np.uint16).max}) "
-                "for processing with itk.LabelImageToShapeLabelMapFilter."
-            )
-    del label_da
-
     # Get the images
-    if use_masks:
-        images = ome_zarr_container.get_masked_image(
-            path=level_path,
-            masking_label_name=masking_label_name,
-            masking_table_name=ROI_table_name,
-        )
-    else:
-        images = ome_zarr_container.get_image(path=level_path)
+    images = ome_zarr_container.get_image(path=level_path)
 
     # Get channels to include/exclude
     if measure_intensity_features.measure:
@@ -467,7 +443,7 @@ def measure_features(
             del tables_roi_list, tables_roi  # Free up memory after each ROI
 
     if tables_list:
-        table_out = pl.concat(tables_list)
+        table_out = pl.concat(tables_list, how="vertical_relaxed")
 
         # Save the output table
         if output_table_name is None:

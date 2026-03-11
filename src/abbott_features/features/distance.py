@@ -24,6 +24,7 @@ from abbott_features.features.types import (
     LabelImage,
     SpatialImage,
 )
+from abbott_features.fractal_tasks.fractal_utils import ensure_uint16, remap_label_ids
 
 
 def _distance_to_border(mask: BinaryImage, label_image_to: Label) -> DistanceTransform:
@@ -64,6 +65,20 @@ class LabelObject(NamedTuple):
     label: int
 
 
+def _get_distance_at_centroid(df: pl.DataFrame, distance_transform: DistanceTransform):
+    return df.with_columns(
+        [
+            pl.col("^.*Centroid$").map_elements(
+                lambda x: _lookup_physical_point(x, distance_transform)
+            ),
+        ]
+    )
+
+
+def _lookup_physical_point(point: pl.Series, image: DistanceTransform):
+    return image.sel(method="nearest", **point).item()
+
+
 def get_distance_features(
     label_image: Union[Label, MaskedLabel],
     label_image_to: Union[Label, MaskedLabel],
@@ -84,11 +99,12 @@ def get_distance_features(
 
     # Convert the label images to spatial_images
     if isinstance(label_image, MaskedLabel):
-        label_numpy = label_image.get_roi_masked_as_numpy(int(roi.name)).astype(
-            np.uint16
-        )
+        label_numpy = label_image.get_roi_masked_as_numpy(int(roi.name))
     else:
-        label_numpy = label_image.get_roi(roi).astype(np.uint16)
+        label_numpy = label_image.get_roi(roi)
+
+    # Relabel to uint16 if needed (itk requires values <= uint16 max)
+    label_numpy, new_to_old = ensure_uint16(label_numpy)
 
     label_spatial_image = si.to_spatial_image(
         label_numpy,
@@ -97,11 +113,13 @@ def get_distance_features(
         name=label_image.meta.name,
     )
     if isinstance(label_image_to, MaskedLabel):
-        label_numpy_to = label_image_to.get_roi_masked_as_numpy(int(roi.name)).astype(
-            np.uint16
-        )
+        label_numpy_to = label_image_to.get_roi_masked_as_numpy(int(roi.name))
     else:
-        label_numpy_to = label_image_to.get_roi_as_numpy(roi).astype(np.uint16)
+        label_numpy_to = label_image_to.get_roi_as_numpy(roi)
+
+    # Relabel to uint16 if needed (itk requires values <= uint16 max)
+    label_numpy_to, _ = ensure_uint16(label_numpy_to)
+
     label_spatial_image_to = si.to_spatial_image(
         label_numpy_to,
         dims=dims,
@@ -158,19 +176,10 @@ def get_distance_features(
         [dfs[0].select(index), *[df.drop(index) for df in dfs]], how="horizontal"
     )
 
+    # If relabeling was performed, restore original label IDs in the feature table.
+    if new_to_old is not None:
+        df_out = remap_label_ids(df_out, new_to_old)
+
+    # add ROI column
     df_out = df_out.with_columns(pl.lit(roi.name).alias("ROI"))
     return df_out
-
-
-def _get_distance_at_centroid(df: pl.DataFrame, distance_transform: DistanceTransform):
-    return df.with_columns(
-        [
-            pl.col("^.*Centroid$").map_elements(
-                lambda x: _lookup_physical_point(x, distance_transform)
-            ),
-        ]
-    )
-
-
-def _lookup_physical_point(point: pl.Series, image: DistanceTransform):
-    return image.sel(method="nearest", **point).item()
