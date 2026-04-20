@@ -65,6 +65,7 @@ def concatenation_function(
         table_cls=FeatureTableV1,
         name=input_table_name,
         index_key="index",
+        strict=False,
     )
 
     df_features = pl.from_pandas(

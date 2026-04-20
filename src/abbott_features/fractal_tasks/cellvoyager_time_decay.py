@@ -290,12 +290,8 @@ def cellvoyager_time_decay(
                     k: v for k, v in acq_images.items() if k.endswith(zarr_ending)
                 }
 
-            # Get mapping of ROI to FOV index based on the ROI tables
-            # for the current acquisition
-            df_mapping_acq = _get_mapping_ROI_to_FOV(
-                images=acq_images,
-                ROI_table_name=ROI_table_name,
-            )
+            # Reuse reference acquisition mapping
+            df_mapping_acq = df_mapping_ref
 
             df_features_acq_pd = concatenate_image_tables_as(
                 images=acq_images.values(),

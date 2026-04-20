@@ -27,10 +27,11 @@ authors = [
 # Required Python version and dependencies
 requires-python = ">=3.11"
 dependencies = ["numpy<2",
+                "pandas<2.3.3",
                 "polars",
-                "scipy",
-                "scikit-learn",
-                "scikit-image",
+                "scipy<1.17",
+                "scikit-learn<1.8.0",
+                "scikit-image<0.26.0",
                 "spatial-image",
                 "seaborn",
                 "itk<5.4.4", 
