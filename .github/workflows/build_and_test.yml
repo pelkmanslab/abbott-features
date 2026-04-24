@@ -28,10 +28,10 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{  matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{  matrix.python-version }}
           cache: "pip"
 
       - name: Install package

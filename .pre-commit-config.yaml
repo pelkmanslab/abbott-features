@@ -2,12 +2,12 @@
 
 repos:
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.15
+    rev: v0.25
     hooks:
       - id: validate-pyproject
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.5.0
+    rev: v0.15.6
     hooks:
       - id: ruff
         args: [--fix]

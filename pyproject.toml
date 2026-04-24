@@ -12,6 +12,24 @@ local_scheme = "no-local-version"
 
 [tool.hatch.metadata]
 allow-direct-references = true # remove once ngio-dev is integrated in ngio
+# Clean up the source distribution to avoid big tag.gz files
+[tool.hatch.build.targets.sdist]
+exclude = [
+    # Exclude tests from the source distribution
+    "tests",
+    # Exclude typically large files and directories that are not needed
+    # This might not exists or be named differently in your project
+    # TBD if we want to include these or not
+    "docs",
+    "data",
+    "examples",
+    "notebooks",
+    ".github",
+    # Remove all jupyter notebook and checkpoints
+    "**/*.ipynb_checkpoints",
+    "**/*.ipynb",
+    # NB all things in .gitignore are excluded by default of hatchling
+]
 
 # Project metadata (see https://peps.python.org/pep-0621)
 [project]
@@ -49,7 +67,16 @@ dependencies = ["numpy<2",
 # Optional dependencies (e.g. for `pip install -e ".[dev]"`, see
 # https://peps.python.org/pep-0621/#dependencies-optional-dependencies)
 [project.optional-dependencies]
-dev = ["devtools", "hatch", "pytest", "requests", "jsonschema", "ruff", "pre-commit"]
+dev = [
+    "notebook",
+    "devtools",
+    "hatch",
+    "pytest",
+    "requests",
+    "jsonschema",
+    "ruff",
+    "pre-commit",
+]
 
 # https://docs.astral.sh/ruff
 [tool.ruff]

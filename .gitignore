@@ -21,7 +21,8 @@ lib/
 lib64/
 parts/
 sdist/
-var/
+# var can not be ignored since it used in anndata
+# var/
 wheels/
 *.egg-info/
 .installed.cfg
@@ -72,9 +73,6 @@ docs/_build/
 # PyBuilder
 target/
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
 # pyenv
 .python-version
 
@@ -112,7 +110,15 @@ ENV/
 .vscode/
 .idea/
 
-*.zarr
-
 # Test data loaded via pooch
 tests/data/10_5281_zenodo_15343366
+.idea/# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+# Zarr
+*.zarr
+
+# Notebooks
+*.ipynb
+.ipynb_checkpoints
