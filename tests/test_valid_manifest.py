@@ -1,13 +1,22 @@
+"""Tests for valid manifest."""
+
 import json
+from pathlib import Path
 
 import requests
 from jsonschema import validate
 
-from . import MANIFEST
+import abbott_features
+
+PACKAGE_DIR = Path(abbott_features.__file__).parent
+MANIFEST_FILE = PACKAGE_DIR / "__FRACTAL_MANIFEST__.json"
+with MANIFEST_FILE.open("r") as f:
+    MANIFEST = json.load(f)
 
 
 def test_valid_manifest(tmp_path):
-    """
+    """Test if the manifest is valid according to the JSON schema.
+
     NOTE: to avoid adding a fractal-server dependency, we simply download the
     relevant file.
     """

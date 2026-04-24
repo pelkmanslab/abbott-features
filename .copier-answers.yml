@@ -1,10 +1,17 @@
 # Do not edit - changes here will be overwritten by Copier
-_commit: v0.5.1
+_commit: v0.6.6
 _src_path: gh:fractal-analytics-platform/fractal-tasks-template
 author_email: ruth.hornbachner@uzh.ch
 author_name: Ruth Hornbachner
+include_feature_task: false
+include_image_processing_task: false
+include_segmentation_task: false
+mode: customize
 package_name: abbott_features
+project_license: BSD-3-Clause
 project_name: abbott-features
 project_short_description: Package description.
 project_url: https://github.com/pelkmanslab/abbott-features
+run_git_init: false
+run_pixi_init_task: false
 

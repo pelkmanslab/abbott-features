@@ -10,6 +10,7 @@ The tasks in abbott-features are focused on extending Fractal's capabilities to 
 | Measure Features | Calculates morphology, intensity, distance, and colocalization features for objects in a 3D label image.| ✓ |
 | Get Cellvoyager Time Decay | Calculates time-decay correction factors per ROI, channel and acquisition to correct for acquisition bias dependent intensity decay (aka imaging snake).| ✓ |
 | Get Z Decay Models | Calculates z-decay correction models per channel label to correct intensity decay across z.|✓|
+| Aggregate Feature Tables | Concatenates feature tables into a single table.|✓|
 
 ## Installation
 
