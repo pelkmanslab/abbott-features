@@ -135,11 +135,6 @@
           "NeighborhoodFeaturesInputModel": {
             "description": "Get label_name of label image to measure neighborhood in.",
             "properties": {
-              "measure": {
-                "default": false,
-                "title": "Measure",
-                "type": "boolean"
-              },
               "label_img_mask": {
                 "title": "Label Img Mask",
                 "type": "string"
@@ -231,7 +226,15 @@
             "description": "Whether to measure label features."
           },
           "measure_intensity_features": {
-            "$ref": "#/$defs/IntensityFeaturesInputModel",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/IntensityFeaturesInputModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
             "title": "Measure Intensity Features",
             "description": "From which channels intensity features should be measured. If not provided, the task will not measure any intensity features."
           },
@@ -347,7 +350,6 @@
         "required": [
           "zarr_url",
           "label_name",
-          "measure_intensity_features",
           "ROI_table_name"
         ],
         "type": "object",

@@ -104,18 +104,7 @@ class NeighborhoodFeaturesInputModel(BaseModel):
             in e.g. "embryo" or "organoid".
     """
 
-    measure: bool = False
     label_img_mask: str
-
-    @model_validator(mode="after")
-    def mutually_exclusive_channel_attributes(self: Self) -> Self:
-        """Check that if `measure` is set to False, `label_img_mask` is None."""
-        measure = self.measure
-        label_img_mask = self.label_img_mask
-
-        if not measure and label_img_mask is not None:
-            raise ValueError(f"`measure` can not be set to False if {label_img_mask=}.")
-        return self
 
 
 class AcquisitionFolderInputModel(BaseModel):

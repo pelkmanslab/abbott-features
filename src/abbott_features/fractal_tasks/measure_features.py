@@ -67,7 +67,7 @@ def measure_features(
     reference_acquisition: int | None = None,
     level_path: str = "0",
     measure_label_features: bool = False,
-    measure_intensity_features: IntensityFeaturesInputModel,
+    measure_intensity_features: IntensityFeaturesInputModel | None = None,
     measure_distance_features: DistanceFeaturesInputModel | None = None,
     measure_colocalization_features: ColocalizationFeaturesInputModel | None = None,
     measure_neighborhood_features: NeighborhoodFeaturesInputModel | None = None,
@@ -201,7 +201,7 @@ def measure_features(
     images = ome_zarr_container.get_image(path=level_path)
 
     # Get channels to include/exclude
-    if measure_intensity_features.measure:
+    if measure_intensity_features is not None:
         # If no channels to include or exclude, use all channels
         channel_labels = images.channel_labels
         if measure_intensity_features.channels_to_include is not None:
@@ -402,7 +402,7 @@ def measure_features(
                 )
                 tables_roi_list.append(colocalization_roi_table)
 
-        if measure_neighborhood_features.measure:
+        if measure_neighborhood_features is not None:
             if zarr_url == ref_zarr_url:
                 label_img_mask_name = measure_neighborhood_features.label_img_mask
 
