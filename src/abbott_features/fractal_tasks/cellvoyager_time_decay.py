@@ -14,7 +14,6 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -94,7 +93,7 @@ def cellvoyager_time_decay(
     feature_table_name: str = "nuclei",
     label_name: str = "nuclei",
     spherical_radius_cutoff: tuple[float, float] = (4, 8),
-    control_wells: Optional[list[str]] = None,
+    control_wells: list[str] | None = None,
     alignment_score_cutoff: float = 0.8,
     time_decay_table_name: str = "time_decay_models",
     overwrite: bool = True,

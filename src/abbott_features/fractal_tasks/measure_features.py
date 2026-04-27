@@ -13,7 +13,6 @@
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 import polars as pl
 from ngio import open_ome_zarr_container, open_ome_zarr_plate, open_ome_zarr_well
@@ -64,24 +63,20 @@ def measure_features(
     zarr_url: str,
     # Task-specific arguments:
     label_name: str,
-    parent_label_names: Optional[list[str]] = None,
-    reference_acquisition: Optional[int] = None,
+    parent_label_names: list[str] | None = None,
+    reference_acquisition: int | None = None,
     level_path: str = "0",
     measure_label_features: bool = False,
-    measure_intensity_features: IntensityFeaturesInputModel = (
-        IntensityFeaturesInputModel()
-    ),
-    measure_distance_features: Optional[DistanceFeaturesInputModel] = None,
-    measure_colocalization_features: Optional[ColocalizationFeaturesInputModel] = None,
-    measure_neighborhood_features: NeighborhoodFeaturesInputModel = (
-        NeighborhoodFeaturesInputModel()
-    ),
-    z_decay_correction: Optional[str] = None,
-    t_decay_correction: Optional[TimeDecayInputModel] = None,
+    measure_intensity_features: IntensityFeaturesInputModel,
+    measure_distance_features: DistanceFeaturesInputModel | None = None,
+    measure_colocalization_features: ColocalizationFeaturesInputModel | None = None,
+    measure_neighborhood_features: NeighborhoodFeaturesInputModel | None = None,
+    z_decay_correction: str | None = None,
+    t_decay_correction: TimeDecayInputModel | None = None,
     ROI_table_name: str,
     use_masks: bool = True,
-    masking_label_name: Optional[str] = None,
-    output_table_name: Optional[str] = None,
+    masking_label_name: str | None = None,
+    output_table_name: str | None = None,
     overwrite: bool = True,
 ) -> None:
     """Measure features.
@@ -268,7 +263,7 @@ def measure_features(
     tables_list = []
     for i_ROI, roi in enumerate(roi_table.rois()):
         tables_roi_list = []
-        logger.info(f"Now processing ROI {i_ROI+1}/{num_ROIs}")
+        logger.info(f"Now processing ROI {i_ROI + 1}/{num_ROIs}")
 
         kwargs_decay_corr = {
             "t_decay_correction_df": df_t_corr,

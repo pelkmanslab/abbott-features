@@ -15,7 +15,7 @@ import logging
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -58,8 +58,7 @@ def z_decay(
     label_name: str = "nuclei",
     embryo_label_name: str = "embryo",
     spherical_radius_cutoff: tuple[float, float] = (4, 8),
-    roundness_cutoff: float = 0.8,
-    control_wells: Optional[list[str]] = None,
+    control_wells: list[str] | None = None,
     alignment_score_cutoff: float = 0.8,
     loss: Literal["linear", "huber"] = "huber",
     overwrite: bool = True,
@@ -87,8 +86,6 @@ def z_decay(
             cutoff for the equivalent spherical radius of the objects to be
             included in the time decay models (to exclude e.g. bright mitotic cells
             that could shift the embryo's mean intensity). Default is (4, 8).
-        roundness_cutoff: Float value defining the cutoff for the roundness of
-            the objects to be included in the time decay models.
         control_wells: List of wells to be excluded from the z-decay
             models. If None, no wells are excluded. E.g. ["B03", "B04"].
         alignment_score_cutoff: Float value to filter out misaligned cells
