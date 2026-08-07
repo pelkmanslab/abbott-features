@@ -11,7 +11,7 @@
 
 """Io models for Fractal task input"""
 
-from typing import Literal, Optional, Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, model_validator
 
@@ -82,7 +82,7 @@ class DistanceFeaturesInputModel(BaseModel):
             to e.g. "embryo" or "organoid".
     """
 
-    label_name_to: str | None = None
+    label_name_to: str
 
 
 class ColocalizationFeaturesInputModel(BaseModel):
@@ -104,18 +104,7 @@ class NeighborhoodFeaturesInputModel(BaseModel):
             in e.g. "embryo" or "organoid".
     """
 
-    measure: bool = False
-    label_img_mask: Optional[str] = None
-
-    @model_validator(mode="after")
-    def mutually_exclusive_channel_attributes(self: Self) -> Self:
-        """Check that if `measure` is set to False, `label_img_mask` is None."""
-        measure = self.measure
-        label_img_mask = self.label_img_mask
-
-        if not measure and label_img_mask is not None:
-            raise ValueError(f"`measure` can not be set to False if {label_img_mask=}.")
-        return self
+    label_img_mask: str
 
 
 class AcquisitionFolderInputModel(BaseModel):
@@ -146,20 +135,8 @@ class TimeDecayInputModel(BaseModel):
         "correctionFactor-ExpNoOffset",
         "correctionFactor-Linear",
         "correctionFactor-LogLinear",
-    ] = None
-    table_name: str = None
-
-    @model_validator(mode="after")
-    def inclusive_channel_attributes(self: Self) -> Self:
-        """Check that both `table_name` and `correction_factor` are set."""
-        correction_factor = self.correction_factor
-        table_name = self.table_name
-
-        if correction_factor is None and table_name:
-            raise ValueError(
-                "`correction_factor` cannot be None if `table_name` is set."
-            )
-        return self
+    ]
+    table_name: str
 
 
 class InitArgsRegistration(BaseModel):

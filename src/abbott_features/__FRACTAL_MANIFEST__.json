@@ -94,18 +94,13 @@
             "description": "Get label_name of label image to measure distance to.",
             "properties": {
               "label_name_to": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Label Name To"
+                "title": "Label Name To",
+                "type": "string"
               }
             },
+            "required": [
+              "label_name_to"
+            ],
             "title": "DistanceFeaturesInputModel",
             "type": "object"
           },
@@ -140,24 +135,14 @@
           "NeighborhoodFeaturesInputModel": {
             "description": "Get label_name of label image to measure neighborhood in.",
             "properties": {
-              "measure": {
-                "default": false,
-                "title": "Measure",
-                "type": "boolean"
-              },
               "label_img_mask": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Label Img Mask"
+                "title": "Label Img Mask",
+                "type": "string"
               }
             },
+            "required": [
+              "label_img_mask"
+            ],
             "title": "NeighborhoodFeaturesInputModel",
             "type": "object"
           },
@@ -165,7 +150,6 @@
             "description": "Get the path to the time decay table and the correction Factor to use.",
             "properties": {
               "correction_factor": {
-                "default": null,
                 "enum": [
                   "correctionFactor-Exp",
                   "correctionFactor-ExpNoOffset",
@@ -176,11 +160,14 @@
                 "type": "string"
               },
               "table_name": {
-                "default": null,
                 "title": "Table Name",
                 "type": "string"
               }
             },
+            "required": [
+              "correction_factor",
+              "table_name"
+            ],
             "title": "TimeDecayInputModel",
             "type": "object"
           }
@@ -239,12 +226,15 @@
             "description": "Whether to measure label features."
           },
           "measure_intensity_features": {
-            "$ref": "#/$defs/IntensityFeaturesInputModel",
-            "default": {
-              "measure": false,
-              "channels_to_include": null,
-              "channels_to_exclude": null
-            },
+            "anyOf": [
+              {
+                "$ref": "#/$defs/IntensityFeaturesInputModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
             "title": "Measure Intensity Features",
             "description": "From which channels intensity features should be measured. If not provided, the task will not measure any intensity features."
           },
@@ -275,11 +265,15 @@
             "description": "If `channel_pair` is set, the task will measure colocalization features per channel pair. E.g. colocalization between `channel_0` and `channel_1`."
           },
           "measure_neighborhood_features": {
-            "$ref": "#/$defs/NeighborhoodFeaturesInputModel",
-            "default": {
-              "measure": false,
-              "label_img_mask": null
-            },
+            "anyOf": [
+              {
+                "$ref": "#/$defs/NeighborhoodFeaturesInputModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
             "title": "Measure Neighborhood Features",
             "description": "If `measure` is set to True, neighborhood features will be measured. If neighborhood is measured in e.g. `embryo` or `organoid` segmentation provide the `label_img_mask`."
           },
@@ -598,12 +592,6 @@
             "title": "Spherical Radius Cutoff",
             "type": "array",
             "description": "Tuple of floats defining the lower and upper cutoff for the equivalent spherical radius of the objects to be included in the time decay models (to exclude e.g. bright mitotic cells that could shift the embryo's mean intensity). Default is (4, 8)."
-          },
-          "roundness_cutoff": {
-            "default": 0.8,
-            "title": "Roundness Cutoff",
-            "type": "number",
-            "description": "Float value defining the cutoff for the roundness of the objects to be included in the time decay models."
           },
           "control_wells": {
             "anyOf": [

@@ -5,7 +5,6 @@ import pytest
 from devtools import debug
 from ngio import open_ome_zarr_container, open_ome_zarr_plate
 from ngio.utils._errors import NgioValueError
-from pydantic import ValidationError
 
 from abbott_features.fractal_tasks.aggregate_feature_tables import (
     aggregate_feature_tables,
@@ -81,7 +80,6 @@ def test_decays(test_data_dir):
         label_name="nuclei",
         embryo_label_name="emb_linked",
         spherical_radius_cutoff=(2, 8),
-        roundness_cutoff=0.8,
         alignment_score_cutoff=0,
         loss="huber",
     )
@@ -168,7 +166,7 @@ def test_measure_features(test_data_dir):
         ]
     )
     measure_neighborhood_features = NeighborhoodFeaturesInputModel(
-        measure=True, label_img_mask="emb_linked"
+        label_img_mask="emb_linked"
     )
 
     for zarr_url in zarr_urls:
@@ -224,10 +222,6 @@ def test_measure_features(test_data_dir):
     # Verify that the table was added to the OME-Zarr plate
     ome_plate = open_ome_zarr_plate(test_data_dir)
     ome_plate.get_feature_table("nuclei_aggregated")
-
-    # Test validation of measure_neighborhood_features if measure is False
-    with pytest.raises(ValidationError):
-        NeighborhoodFeaturesInputModel(measure=False, label_img_mask="emb_linked")
 
     measure_intensity_features = IntensityFeaturesInputModel(
         measure=False,
@@ -299,7 +293,7 @@ def test_measure_features_uint32(test_data_dir):
     )
 
     measure_neighborhood_features = NeighborhoodFeaturesInputModel(
-        measure=True, label_img_mask="emb_linked"
+        label_img_mask="emb_linked"
     )
 
     measure_features(
