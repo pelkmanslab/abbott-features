@@ -64,14 +64,12 @@ class IntensityFeaturesInputModel(BaseModel):
     """Get intensity features to measure.
 
     Attributes:
-        measure: Whether to measure intensity features or not.
         channels_to_include: Channels to include in the measurement.
         channels_to_exclude: Channels to exclude from the measurement.
     """
 
-    measure: bool = False
-    channels_to_include: list[ChannelInputModel] = None
-    channels_to_exclude: list[ChannelInputModel] = None
+    channels_to_include: list[ChannelInputModel] | None = None
+    channels_to_exclude: list[ChannelInputModel] | None = None
 
 
 class DistanceFeaturesInputModel(BaseModel):
@@ -135,7 +133,7 @@ class TimeDecayInputModel(BaseModel):
         "correctionFactor-ExpNoOffset",
         "correctionFactor-Linear",
         "correctionFactor-LogLinear",
-    ]
+    ] = "correctionFactor-Exp"
     table_name: str
 
 

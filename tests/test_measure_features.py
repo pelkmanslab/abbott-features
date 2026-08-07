@@ -271,7 +271,7 @@ def test_measure_features_uint32(test_data_dir):
 
     # Relabel to uint32 with an offset to ensure label IDs > uint16 max
     offset = 70000
-    label_da_uint32 = label_da + offset
+    label_da_uint32 = label_da.astype("uint32") + offset
     derived_label.set_array(label_da_uint32)
     derived_label.consolidate()
 
