@@ -122,7 +122,7 @@ def _is_not_itk_transform(prop: str) -> bool:
 def convert_itk_dtypes(feature) -> dict[str, int] | dict[str, float] | float | int:
     if isinstance(feature, itk.Region):
         return _convert_itk_bbx(feature)
-    elif isinstance(feature, (itk.Point, itk.Index)):  # noqa: UP038
+    elif isinstance(feature, (itk.Point, itk.Index)):
         return _convert_itk_point_vector_index(feature)
     elif isinstance(feature, itk.Vector):
         return _convert_itk_point_vector_index(feature, dims=("a", "b", "c"))
@@ -172,9 +172,9 @@ def _convert_itk_fixed_array(
     outer_dims: Sequence[str] = ("a", "b", "c"),
     inner_dims: Sequence[str] = ("x", "y", "z"),
 ) -> dict[str, float]:
-    assert isinstance(
-        array, itk.FixedArray
-    ), "`matrix` must be of type `itk.FixedArray`"
+    assert isinstance(array, itk.FixedArray), (
+        "`matrix` must be of type `itk.FixedArray`"
+    )
     columns = {}
     array_np = np.array([tuple(array.GetElement(i)) for i in range(array.Size())])
     for m, dim in zip(array_np, outer_dims, strict=False):

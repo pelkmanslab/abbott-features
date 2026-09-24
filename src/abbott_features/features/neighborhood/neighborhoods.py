@@ -9,11 +9,14 @@ import logging
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from itertools import accumulate, product
-from typing import Literal, Optional, ParamSpec, TypeAlias, TypeVar, cast
+from typing import Literal, ParamSpec, TypeAlias, TypeVar, cast
 
 import networkx as nx
 import numpy as np
 import polars as pl
+from abbott_features.features.neighborhood.neighborhood_matrix_parallel import (
+    weighted_anisotropic_touch_matrix,
+)
 from attrs import asdict, frozen
 from numpy.typing import NDArray
 from scipy import spatial
@@ -27,9 +30,6 @@ from abbott_features.features.neighborhood.neighborhood_aggregation import (
     aggregate_rows_csr,
     aggregate_table_csr,
     aggregate_weighted_table_csr,
-)
-from abbott_features.features.neighborhood.neighborhood_matrix_parallel import (
-    weighted_anisotropic_touch_matrix,
 )
 from abbott_features.features.types import SpatialImage
 from abbott_features.fractal_tasks.polars_utils import unnest_all_structs
@@ -169,7 +169,7 @@ class tuple_product:  # type: ignore
                     if v.default is not inspect._empty
                 },  # default arguments from signature
                 **dict(
-                    zip(function_signature, args)
+                    zip(function_signature, args, strict=False)
                 ),  # warp positional arguments as kwargs
                 **kwargs,
             }
@@ -185,7 +185,10 @@ class tuple_product:  # type: ignore
             out = []
             iter_args = {e: adjusted_kwargs.pop(e) for e in self.decorator_args}
             for e in product(*iter_args.values()):
-                params = {**dict(zip(iter_args.keys(), e)), **adjusted_kwargs}
+                params = {
+                    **dict(zip(iter_args.keys(), e, strict=True)),
+                    **adjusted_kwargs,
+                }
                 out.append(func(**params))
             return tuple(out)
 
@@ -317,7 +320,7 @@ class make_iterable:  # type: ignore
         def wrapped_func(*args, **kwargs):
             adjusted_kwargs = {
                 **dict(
-                    zip(inspect.signature(func).parameters, args)
+                    zip(inspect.signature(func).parameters, args, strict=False)
                 ),  # warp positional arguments in a dict and pass as kwarg
                 **kwargs,
             }
@@ -339,7 +342,7 @@ class generator_over:  # type: ignore
         def wrapped_func(*args, **kwargs):
             adjusted_kwargs = {
                 **dict(
-                    zip(inspect.signature(func).parameters, args)
+                    zip(inspect.signature(func).parameters, args, strict=False)
                 ),  # warp positional arguments in a dict and pass as kwarg
                 **kwargs,
             }
@@ -352,7 +355,10 @@ class generator_over:  # type: ignore
             # separate out arguments to iterate over, iterate, yield results.
             iter_args = {e: adjusted_kwargs.pop(e) for e in self.decorator_args}
             for e in product(*iter_args.values()):
-                params = {**dict(zip(iter_args.keys(), e)), **adjusted_kwargs}
+                params = {
+                    **dict(zip(iter_args.keys(), e, strict=True)),
+                    **adjusted_kwargs,
+                }
                 yield func(**params)
 
         return wrapped_func
@@ -387,10 +393,10 @@ def _csr_concatenate_along_corner(arrs: CSRArray | Iterable[CSRArray]) -> CSRArr
     out_shape = offsets[-1]
 
     row = np.concatenate(
-        [arr.row + offset[0] for arr, offset in zip(coo_arrays, offsets)]
+        [arr.row + offset[0] for arr, offset in zip(coo_arrays, offsets, strict=False)]
     )
     col = np.concatenate(
-        [arr.col + offset[1] for arr, offset in zip(coo_arrays, offsets)]
+        [arr.col + offset[1] for arr, offset in zip(coo_arrays, offsets, strict=False)]
     )
     data = np.concatenate([arr.data for arr in coo_arrays])
 
@@ -482,7 +488,7 @@ def query_knn_adjacency(
     n_objects = neighbors._fit_X.shape[0]
     if k > (n_objects - 1):
         logger.warning(
-            f"k={k} > (n_objects-1)={(n_objects-1)}; setting k to {n_objects-1}"
+            f"k={k} > (n_objects-1)={(n_objects - 1)}; setting k to {n_objects - 1}"
         )
         k = n_objects - 1
     X = neighbors._fit_X if self_loops else None
@@ -503,7 +509,7 @@ def query_knn_distance(
     n_objects = neighbors._fit_X.shape[0]
     if k > (n_objects - 1):
         logger.warn(
-            f"k={k} > (n_objects-1)={(n_objects-1)}; setting k to {n_objects-1}"
+            f"k={k} > (n_objects-1)={(n_objects - 1)}; setting k to {n_objects - 1}"
         )
         k = n_objects - 1
     X = neighbors._fit_X if self_loops else None
@@ -554,7 +560,7 @@ def query_radius_kernel(
     function: str = "triangular",
     row_normalized: bool = True,
 ) -> CSRArray:
-    """i. e. fixed bandwidth"""
+    """I. e. fixed bandwidth"""
     distance_matrix = next(
         query_radius_distance(neighbors=neighbors, r=r, self_loops=self_loops)
     )
@@ -575,7 +581,7 @@ def query_knn_kernel(
     function: str = "triangular",
     row_normalized: bool = True,
 ) -> CSRArray:
-    """i. e. adaptive bandwidth"""
+    """I. e. adaptive bandwidth"""
     n_dist, _ = neighbors.kneighbors(n_neighbors=k)
     bandwidth = n_dist[:, -1]
     distance_matrix = next(
@@ -646,17 +652,17 @@ class NeighborhoodQueryObject:
             for label_column in label_columns:
                 assert label_column in df, f"'{label_column}' not found."
             label = df.select(label_columns)
-            assert (
-                label.unique().height == df.height
-            ), f"None unique labels when using label_columns: `{tuple(label_columns)}`"
+            assert label.unique().height == df.height, (
+                f"None unique labels when using label_columns: `{tuple(label_columns)}`"
+            )
 
         if region_id_column is not None:
-            assert (
-                region_id_column in df
-            ), f"`region_id_column` '{region_id_column}' not found."
-            assert df[
-                region_id_column
-            ].is_sorted(), "`df` must be sorted by `region_id_column`."
+            assert region_id_column in df, (
+                f"`region_id_column` '{region_id_column}' not found."
+            )
+            assert df[region_id_column].is_sorted(), (
+                "`df` must be sorted by `region_id_column`."
+            )
             dfs = df.groupby(region_id_column, maintain_order=True)
         else:
             dfs = [("site_0", df)]
@@ -698,17 +704,17 @@ class NeighborhoodQueryObject:
         cls,
         scale: tuple[float, ...],
         lbl: SpatialImage,
-        mask: Optional[SpatialImage] = None,
+        mask: SpatialImage | None = None,
         mask_n_samples: int = 100,
     ) -> "NeighborhoodQueryObject":
         if isinstance(lbl, dict):
             if mask is not None:
-                assert isinstance(
-                    mask, dict
-                ), "You need to pass a dict of mask's if you pass a dict of lbl's"
-                assert set(lbl.keys()) == set(
-                    mask.keys()
-                ), "Dictionaries have inconsistent keys."
+                assert isinstance(mask, dict), (
+                    "You need to pass a dict of mask's if you pass a dict of lbl's"
+                )
+                assert set(lbl.keys()) == set(mask.keys()), (
+                    "Dictionaries have inconsistent keys."
+                )
 
             dfs = []
             delaunays = []
@@ -861,7 +867,7 @@ class NeighborhoodQueryObject:
         edge_weights: bool = False,
     ) -> pl.DataFrame:
         if not isinstance(func, Sequence):
-            funcs = [cast(AggFn, func)]
+            funcs = [cast("AggFn", func)]
         else:
             funcs = func
 
@@ -871,9 +877,9 @@ class NeighborhoodQueryObject:
             df = unnest_all_structs(df.to_frame())
         elif df is None:
             for func in funcs:
-                assert (
-                    func.__name__ in aggregation_functions.NEIGHBORS
-                ), f"Cannot to '{func.__name__}' aggregation without `df`."
+                assert func.__name__ in aggregation_functions.NEIGHBORS, (
+                    f"Cannot to '{func.__name__}' aggregation without `df`."
+                )
         else:
             raise ValueError(
                 f"`df` must be polars.Series or polars.DataFrame, not `{type(df)}`"
@@ -885,7 +891,8 @@ class NeighborhoodQueryObject:
             if df.height != rows_before:
                 warnings.warn(
                     "Joining `NeighborhoodQueryObject.label` with the provided `df` "
-                    f"lead to dropping of {rows_before-df.height}/{rows_before} rows.",
+                    f"lead to dropping of {rows_before - df.height}/{rows_before} "
+                    "rows.",
                     stacklevel=2,
                 )
             if drop_label_columns_from_df:
@@ -934,7 +941,8 @@ class NeighborhoodQueryObject:
                                         zip(
                                             *self.label.select(
                                                 pl.struct(pl.all())
-                                            ).with_row_index()
+                                            ).with_row_index(),
+                                            strict=True,
                                         )
                                     )
                                 )
@@ -984,7 +992,7 @@ class NeighborhoodQueryObject:
         return_label: bool = False,
     ) -> pl.DataFrame:
         if not isinstance(func, Sequence):
-            funcs = [cast(AggFn, func)]
+            funcs = [cast("AggFn", func)]
         else:
             funcs = func
 

@@ -160,14 +160,24 @@ def measure_features(
         elif len(ref_zarr_paths) > 1:
             if zarr_ending is not None:
                 ref_zarr_path = f"{reference_acquisition}_{zarr_ending}"
-        else:
-            ref_zarr_path = ref_zarr_paths[0]  # TODO: Come up with better fix
+            elif str(reference_acquisition) in ref_zarr_paths:
+                ref_zarr_path = str(reference_acquisition)
+            else:
+                raise ValueError(
+                    f"Multiple paths found for acquisition "
+                    f"{reference_acquisition=} in {well_url=}, but "
+                    f"cannot determine which one to use because "
+                    f"'{zarr_url}' has no recognizable suffix."
+                )
 
-        if ref_zarr_path not in ref_zarr_paths:
-            raise ValueError(
-                f"Path '{ref_zarr_path}' not found for acquisition "
-                f"{reference_acquisition=} in {well_url=}. "
-            )
+            if ref_zarr_path not in ref_zarr_paths:
+                raise ValueError(
+                    f"Path '{ref_zarr_path}' not found for acquisition "
+                    f"{reference_acquisition=} in {well_url=}. "
+                )
+        else:
+            ref_zarr_path = ref_zarr_paths[0]
+
         ref_zarr_url = (well_url / ref_zarr_path).as_posix()
     else:
         ref_zarr_url = zarr_url
@@ -310,7 +320,7 @@ def measure_features(
                     f"Measured label features for {label_name=} in {zarr_url=}"
                 )
 
-        if measure_intensity_features.measure:
+        if measure_intensity_features is not None:
             if channel_labels:
                 channel_roi_table_list = []
                 for channel_label in channel_labels:

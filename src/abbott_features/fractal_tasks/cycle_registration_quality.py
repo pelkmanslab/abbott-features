@@ -99,9 +99,7 @@ def cycle_registration_quality(
     colocalization_table = []
     num_ROIs = len(ref_roi_table.rois())
     for i_ROI, ref_roi in enumerate(ref_roi_table.rois()):
-        logger.info(
-            f"Now processing ROI {i_ROI+1}/{num_ROIs} " f"for {wavelength_id=}."
-        )
+        logger.info(f"Now processing ROI {i_ROI + 1}/{num_ROIs} for {wavelength_id=}.")
 
         ##############
         #  Calculate the registration score

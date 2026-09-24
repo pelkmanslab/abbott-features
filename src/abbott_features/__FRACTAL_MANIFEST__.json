@@ -107,26 +107,35 @@
           "IntensityFeaturesInputModel": {
             "description": "Get intensity features to measure.",
             "properties": {
-              "measure": {
-                "default": false,
-                "title": "Measure",
-                "type": "boolean"
-              },
               "channels_to_include": {
+                "anyOf": [
+                  {
+                    "items": {
+                      "$ref": "#/$defs/ChannelInputModel"
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
                 "default": null,
-                "items": {
-                  "$ref": "#/$defs/ChannelInputModel"
-                },
-                "title": "Channels To Include",
-                "type": "array"
+                "title": "Channels To Include"
               },
               "channels_to_exclude": {
+                "anyOf": [
+                  {
+                    "items": {
+                      "$ref": "#/$defs/ChannelInputModel"
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
                 "default": null,
-                "items": {
-                  "$ref": "#/$defs/ChannelInputModel"
-                },
-                "title": "Channels To Exclude",
-                "type": "array"
+                "title": "Channels To Exclude"
               }
             },
             "title": "IntensityFeaturesInputModel",
@@ -150,6 +159,7 @@
             "description": "Get the path to the time decay table and the correction Factor to use.",
             "properties": {
               "correction_factor": {
+                "default": "correctionFactor-Exp",
                 "enum": [
                   "correctionFactor-Exp",
                   "correctionFactor-ExpNoOffset",
@@ -165,7 +175,6 @@
               }
             },
             "required": [
-              "correction_factor",
               "table_name"
             ],
             "title": "TimeDecayInputModel",
